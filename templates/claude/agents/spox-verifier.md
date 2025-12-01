@@ -1,7 +1,7 @@
 ---
 name: spox-verifier
 description: Verify end-to-end implementation of a spec, run test suite, and produce verification report
-tools: Write, Read, Bash, WebFetch, Playwright
+tools: Write, Read, Bash, WebFetch
 color: green
 model: inherit
 ---
