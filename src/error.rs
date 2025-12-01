@@ -15,6 +15,8 @@ pub enum Error {
     AlreadyInitialized,
     /// An error occurred during initialization.
     InitError(String),
+    /// A generic error with a custom message.
+    Other(String),
 }
 
 impl fmt::Display for Error {
@@ -28,6 +30,7 @@ impl fmt::Display for Error {
                 write!(f, "project already initialized (.spox/ directory exists)")
             }
             Error::InitError(msg) => write!(f, "initialization error: {}", msg),
+            Error::Other(msg) => write!(f, "{}", msg),
         }
     }
 }
