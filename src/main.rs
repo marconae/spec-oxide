@@ -3,6 +3,8 @@ mod config;
 mod config_cmd;
 mod error;
 mod init;
+mod validate;
+mod validate_cmd;
 
 use clap::Parser;
 use cli::{ChangeCommands, Cli, Commands, ConfigCommands, SpecCommands};
@@ -35,13 +37,13 @@ fn run(cmd: Commands) -> error::Result<()> {
         Commands::Spec(action) => match action {
             SpecCommands::List => not_implemented("spec list"),
             SpecCommands::Show { .. } => not_implemented("spec show"),
-            SpecCommands::Validate => not_implemented("spec validate"),
+            SpecCommands::Validate { id, strict } => validate_cmd::run_spec_validate(id, strict),
         },
         Commands::Change(action) => match action {
             ChangeCommands::Init { .. } => not_implemented("change init"),
             ChangeCommands::List => not_implemented("change list"),
             ChangeCommands::Show { .. } => not_implemented("change show"),
-            ChangeCommands::Validate => not_implemented("change validate"),
+            ChangeCommands::Validate { id, strict } => validate_cmd::run_change_validate(id, strict),
             ChangeCommands::Approve => not_implemented("change approve"),
         },
         Commands::Config(action) => match action {

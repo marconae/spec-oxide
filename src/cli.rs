@@ -45,7 +45,14 @@ pub enum SpecCommands {
     },
 
     /// Validate specs
-    Validate,
+    Validate {
+        /// Spec ID to validate (validates all if not specified)
+        id: Option<String>,
+
+        /// Strict mode - warnings also cause failure
+        #[arg(long)]
+        strict: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -66,7 +73,14 @@ pub enum ChangeCommands {
     },
 
     /// Validate changes
-    Validate,
+    Validate {
+        /// Change ID to validate (validates all if not specified)
+        id: Option<String>,
+
+        /// Strict mode - warnings also cause failure
+        #[arg(long)]
+        strict: bool,
+    },
 
     /// Approve a change
     Approve,
