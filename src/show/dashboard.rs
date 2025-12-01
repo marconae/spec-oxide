@@ -62,7 +62,13 @@ pub fn gather_dashboard(config: &Config) -> Result<DashboardInfo, String> {
 }
 
 /// Gather all specs with requirement counts.
-fn gather_specs(spec_folder: &str) -> Result<Vec<SpecSummary>, String> {
+///
+/// # Arguments
+/// * `spec_folder` - Path to the specs folder
+///
+/// # Returns
+/// `Ok(Vec<SpecSummary>)` containing all specs, or `Err` with error message.
+pub fn gather_specs(spec_folder: &str) -> Result<Vec<SpecSummary>, String> {
     let spec_path = Path::new(spec_folder);
 
     if !spec_path.exists() {
@@ -127,7 +133,13 @@ fn count_requirements(spec_path: &Path) -> usize {
 }
 
 /// Gather all active changes with task progress.
-fn gather_changes(changes_folder: &str) -> Result<Vec<ChangeSummary>, String> {
+///
+/// # Arguments
+/// * `changes_folder` - Path to the changes folder
+///
+/// # Returns
+/// `Ok(Vec<ChangeSummary>)` containing all active changes, or `Err` with error message.
+pub fn gather_changes(changes_folder: &str) -> Result<Vec<ChangeSummary>, String> {
     let changes_path = Path::new(changes_folder);
 
     if !changes_path.exists() {
