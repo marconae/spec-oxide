@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 /// Spec-driven development for humans and AI
 #[derive(Parser, Debug)]
@@ -13,7 +14,11 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Initialize a new Spox project
-    Init,
+    Init {
+        /// Path to initialize the project in (defaults to current directory)
+        #[arg(long)]
+        path: Option<PathBuf>,
+    },
 
     /// Manage specs
     #[command(subcommand)]
