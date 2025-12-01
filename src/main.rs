@@ -1,8 +1,12 @@
 mod cli;
+mod config;
+mod config_cmd;
 mod error;
+mod init;
 
 use clap::Parser;
 use cli::{ChangeCommands, Cli, Commands, ConfigCommands, SpecCommands};
+use std::path::PathBuf;
 
 fn main() {
     let cli = Cli::parse();
@@ -24,7 +28,10 @@ fn main() {
 
 fn run(cmd: Commands) -> error::Result<()> {
     match cmd {
-        Commands::Init => not_implemented("init"),
+        Commands::Init { path } => {
+            let target_path = path.unwrap_or_else(|| PathBuf::from("."));
+            init::run(&target_path)
+        }
         Commands::Spec(action) => match action {
             SpecCommands::List => not_implemented("spec list"),
             SpecCommands::Show { .. } => not_implemented("spec show"),
@@ -38,7 +45,7 @@ fn run(cmd: Commands) -> error::Result<()> {
             ChangeCommands::Approve => not_implemented("change approve"),
         },
         Commands::Config(action) => match action {
-            ConfigCommands::Show => not_implemented("config show"),
+            ConfigCommands::Show => config_cmd::run_show(),
         },
     }
 }
