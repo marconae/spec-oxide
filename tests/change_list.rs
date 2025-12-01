@@ -1,5 +1,6 @@
 //! Integration tests for `spox change list` command.
 
+use assert_cmd::cargo::cargo_bin_cmd;
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;
@@ -7,7 +8,7 @@ use tempfile::TempDir;
 
 /// Helper function to create a Command for the spox binary.
 fn spox_cmd() -> Command {
-    Command::cargo_bin("spox").unwrap()
+    cargo_bin_cmd!("spox")
 }
 
 /// Helper to create a minimal .spox/config.toml
