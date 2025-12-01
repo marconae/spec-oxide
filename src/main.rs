@@ -3,6 +3,7 @@ mod config;
 mod config_cmd;
 mod error;
 mod init;
+mod list_cmd;
 mod show;
 mod show_cmd;
 mod validate;
@@ -38,13 +39,13 @@ fn run(cmd: Commands) -> error::Result<()> {
         }
         Commands::Show => show_cmd::run_dashboard(),
         Commands::Spec(action) => match action {
-            SpecCommands::List => not_implemented("spec list"),
+            SpecCommands::List => list_cmd::run_spec_list(),
             SpecCommands::Show { id } => show_cmd::run_spec_show(id),
             SpecCommands::Validate { id, strict } => validate_cmd::run_spec_validate(id, strict),
         },
         Commands::Change(action) => match action {
             ChangeCommands::Init { .. } => not_implemented("change init"),
-            ChangeCommands::List => not_implemented("change list"),
+            ChangeCommands::List => list_cmd::run_change_list(),
             ChangeCommands::Show { id, deltas_only } => show_cmd::run_change_show(id, deltas_only),
             ChangeCommands::Validate { id, strict } => validate_cmd::run_change_validate(id, strict),
             ChangeCommands::Approve => not_implemented("change approve"),
