@@ -17,6 +17,16 @@ const TEMPLATE_STANDARDS_GLOBAL_MD: &str = include_str!("../templates/spox/stand
 const TEMPLATE_STANDARDS_TESTING_MD: &str = include_str!("../templates/spox/standards/testing.md");
 const TEMPLATE_STANDARDS_VCS_MD: &str = include_str!("../templates/spox/standards/vcs.md");
 
+// .spox/specs/ templates
+const TEMPLATE_SPEC_SPEC_MD: &str = include_str!("../templates/specs/spec.md");
+const TEMPLATE_SPEC_MISSION_MD: &str = include_str!("../templates/specs/mission.md");
+const TEMPLATE_SPEC_CHANGE_PROPOSAL_MD: &str = include_str!("../templates/specs/change/proposal.md");
+const TEMPLATE_SPEC_CHANGE_TASKS_MD: &str = include_str!("../templates/specs/change/tasks.md");
+const TEMPLATE_SPEC_CHANGE_DESIGN_MD: &str = include_str!("../templates/specs/change/design.md");
+const TEMPLATE_SPEC_CHANGE_SPEC_MD: &str = include_str!("../templates/specs/change/spec.md");
+const TEMPLATE_SPEC_CHANGE_VERIFICATION_MD: &str =
+    include_str!("../templates/specs/change/verification.md");
+
 // .claude/ templates
 const TEMPLATE_AGENT_IMPLEMENTER_MD: &str =
     include_str!("../templates/claude/agents/spox-implementer.md");
@@ -26,10 +36,10 @@ const TEMPLATE_AGENT_VERIFIER_MD: &str =
     include_str!("../templates/claude/agents/spox-verifier.md");
 const TEMPLATE_CMD_ARCHIVE_MD: &str =
     include_str!("../templates/claude/commands/spox/archive.md");
-const TEMPLATE_CMD_ORCHESTRATE_MD: &str =
-    include_str!("../templates/claude/commands/spox/orchestrate.md");
-const TEMPLATE_CMD_PROPOSAL_MD: &str =
-    include_str!("../templates/claude/commands/spox/proposal.md");
+const TEMPLATE_CMD_IMPLEMENT_MD: &str =
+    include_str!("../templates/claude/commands/spox/implement.md");
+const TEMPLATE_CMD_PROPOSE_MD: &str =
+    include_str!("../templates/claude/commands/spox/propose.md");
 
 // specs/ templates
 const TEMPLATE_MISSION_MD: &str = include_str!("../templates/specs/mission.md");
@@ -42,13 +52,22 @@ const TEMPLATE_MISSION_MD: &str = include_str!("../templates/specs/mission.md");
 /// |-- .spox/
 /// |   |-- config.toml
 /// |   |-- workflow.md
-/// |   +-- standards/
-/// |       |-- backend.md
-/// |       |-- coding.md
-/// |       |-- frontend.md
-/// |       |-- global.md
-/// |       |-- testing.md
-/// |       +-- vcs.md
+/// |   |-- standards/
+/// |   |   |-- backend.md
+/// |   |   |-- coding.md
+/// |   |   |-- frontend.md
+/// |   |   |-- global.md
+/// |   |   |-- testing.md
+/// |   |   +-- vcs.md
+/// |   +-- specs/
+/// |       |-- spec.md
+/// |       |-- mission.md
+/// |       +-- change/
+/// |           |-- proposal.md
+/// |           |-- tasks.md
+/// |           |-- design.md
+/// |           |-- spec.md
+/// |           +-- verification.md
 /// |-- .claude/
 /// |   |-- agents/
 /// |   |   |-- spox-implementer.md
@@ -56,8 +75,8 @@ const TEMPLATE_MISSION_MD: &str = include_str!("../templates/specs/mission.md");
 /// |   |   +-- spox-verifier.md
 /// |   +-- commands/spox/
 /// |       |-- archive.md
-/// |       |-- orchestrate.md
-/// |       +-- proposal.md
+/// |       |-- implement.md
+/// |       +-- propose.md
 /// +-- specs/
 ///     |-- mission.md
 ///     |-- _changes/
@@ -89,9 +108,12 @@ pub fn run(base_path: &Path) -> Result<()> {
 fn create_spox_dir(base_path: &Path) -> Result<()> {
     let spox_dir = base_path.join(".spox");
     let standards_dir = spox_dir.join("standards");
+    let specs_dir = spox_dir.join("specs");
+    let specs_change_dir = specs_dir.join("change");
 
     // Create directories
     create_dir_all(&standards_dir)?;
+    create_dir_all(&specs_change_dir)?;
 
     // Write config files
     write_file(&spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML)?;
@@ -110,6 +132,27 @@ fn create_spox_dir(base_path: &Path) -> Result<()> {
         TEMPLATE_STANDARDS_TESTING_MD,
     )?;
     write_file(&standards_dir.join("vcs.md"), TEMPLATE_STANDARDS_VCS_MD)?;
+
+    // Write spec template files
+    write_file(&specs_dir.join("spec.md"), TEMPLATE_SPEC_SPEC_MD)?;
+    write_file(&specs_dir.join("mission.md"), TEMPLATE_SPEC_MISSION_MD)?;
+    write_file(
+        &specs_change_dir.join("proposal.md"),
+        TEMPLATE_SPEC_CHANGE_PROPOSAL_MD,
+    )?;
+    write_file(
+        &specs_change_dir.join("tasks.md"),
+        TEMPLATE_SPEC_CHANGE_TASKS_MD,
+    )?;
+    write_file(
+        &specs_change_dir.join("design.md"),
+        TEMPLATE_SPEC_CHANGE_DESIGN_MD,
+    )?;
+    write_file(&specs_change_dir.join("spec.md"), TEMPLATE_SPEC_CHANGE_SPEC_MD)?;
+    write_file(
+        &specs_change_dir.join("verification.md"),
+        TEMPLATE_SPEC_CHANGE_VERIFICATION_MD,
+    )?;
 
     Ok(())
 }
@@ -142,12 +185,12 @@ fn create_claude_dir(base_path: &Path) -> Result<()> {
     // Write command files
     write_file_if_not_exists(&commands_spox_dir.join("archive.md"), TEMPLATE_CMD_ARCHIVE_MD)?;
     write_file_if_not_exists(
-        &commands_spox_dir.join("orchestrate.md"),
-        TEMPLATE_CMD_ORCHESTRATE_MD,
+        &commands_spox_dir.join("implement.md"),
+        TEMPLATE_CMD_IMPLEMENT_MD,
     )?;
     write_file_if_not_exists(
-        &commands_spox_dir.join("proposal.md"),
-        TEMPLATE_CMD_PROPOSAL_MD,
+        &commands_spox_dir.join("propose.md"),
+        TEMPLATE_CMD_PROPOSE_MD,
     )?;
 
     Ok(())
@@ -221,6 +264,15 @@ fn print_success_message(base_path: &Path) {
     println!("      global.md");
     println!("      testing.md");
     println!("      vcs.md");
+    println!("    specs/");
+    println!("      spec.md");
+    println!("      mission.md");
+    println!("      change/");
+    println!("        proposal.md");
+    println!("        tasks.md");
+    println!("        design.md");
+    println!("        spec.md");
+    println!("        verification.md");
     println!("  .claude/");
     println!("    agents/");
     println!("      spox-implementer.md");
@@ -228,8 +280,8 @@ fn print_success_message(base_path: &Path) {
     println!("      spox-verifier.md");
     println!("    commands/spox/");
     println!("      archive.md");
-    println!("      orchestrate.md");
-    println!("      proposal.md");
+    println!("      implement.md");
+    println!("      propose.md");
     println!("  specs/");
     println!("    mission.md");
     println!("    _changes/");
@@ -266,6 +318,23 @@ mod tests {
     }
 
     #[test]
+    fn test_init_creates_specs_templates_directory() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+        let specs = temp.path().join(".spox/specs");
+        assert!(specs.exists());
+        assert!(specs.join("spec.md").exists());
+        assert!(specs.join("mission.md").exists());
+        let change = specs.join("change");
+        assert!(change.exists());
+        assert!(change.join("proposal.md").exists());
+        assert!(change.join("tasks.md").exists());
+        assert!(change.join("design.md").exists());
+        assert!(change.join("spec.md").exists());
+        assert!(change.join("verification.md").exists());
+    }
+
+    #[test]
     fn test_init_creates_claude_directory() {
         let temp = TempDir::new().unwrap();
         run(temp.path()).unwrap();
@@ -275,8 +344,8 @@ mod tests {
         assert!(claude.join("agents/spox-reviewer.md").exists());
         assert!(claude.join("agents/spox-verifier.md").exists());
         assert!(claude.join("commands/spox/archive.md").exists());
-        assert!(claude.join("commands/spox/orchestrate.md").exists());
-        assert!(claude.join("commands/spox/proposal.md").exists());
+        assert!(claude.join("commands/spox/implement.md").exists());
+        assert!(claude.join("commands/spox/propose.md").exists());
     }
 
     #[test]

@@ -337,8 +337,8 @@ fn test_init_creates_claude_commands_directory() {
 
     // Verify all 3 command files exist
     assert!(commands_dir.join("archive.md").exists());
-    assert!(commands_dir.join("orchestrate.md").exists());
-    assert!(commands_dir.join("proposal.md").exists());
+    assert!(commands_dir.join("implement.md").exists());
+    assert!(commands_dir.join("propose.md").exists());
 }
 
 #[test]
@@ -367,6 +367,36 @@ fn test_init_creates_specs_directory() {
 }
 
 #[test]
+fn test_init_creates_spox_specs_templates_directory() {
+    let temp_dir = TempDir::new().unwrap();
+
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    let specs_dir = temp_dir.path().join(".spox/specs");
+    assert!(specs_dir.exists());
+    assert!(specs_dir.is_dir());
+
+    // Verify spec template files exist
+    assert!(specs_dir.join("spec.md").exists());
+    assert!(specs_dir.join("mission.md").exists());
+
+    // Verify change subdirectory and its files
+    let change_dir = specs_dir.join("change");
+    assert!(change_dir.exists());
+    assert!(change_dir.is_dir());
+    assert!(change_dir.join("proposal.md").exists());
+    assert!(change_dir.join("tasks.md").exists());
+    assert!(change_dir.join("design.md").exists());
+    assert!(change_dir.join("spec.md").exists());
+    assert!(change_dir.join("verification.md").exists());
+}
+
+#[test]
 fn test_init_verifies_all_files_copied_correctly() {
     let temp_dir = TempDir::new().unwrap();
 
@@ -389,6 +419,15 @@ fn test_init_verifies_all_files_copied_correctly() {
     assert!(temp_dir.path().join(".spox/standards/testing.md").exists());
     assert!(temp_dir.path().join(".spox/standards/vcs.md").exists());
 
+    // .spox/specs/ files (2 files + change subdirectory with 5 files)
+    assert!(temp_dir.path().join(".spox/specs/spec.md").exists());
+    assert!(temp_dir.path().join(".spox/specs/mission.md").exists());
+    assert!(temp_dir.path().join(".spox/specs/change/proposal.md").exists());
+    assert!(temp_dir.path().join(".spox/specs/change/tasks.md").exists());
+    assert!(temp_dir.path().join(".spox/specs/change/design.md").exists());
+    assert!(temp_dir.path().join(".spox/specs/change/spec.md").exists());
+    assert!(temp_dir.path().join(".spox/specs/change/verification.md").exists());
+
     // .claude/agents/ files (3 files with spox- prefix)
     assert!(temp_dir.path().join(".claude/agents/spox-implementer.md").exists());
     assert!(temp_dir.path().join(".claude/agents/spox-reviewer.md").exists());
@@ -396,8 +435,8 @@ fn test_init_verifies_all_files_copied_correctly() {
 
     // .claude/commands/spox/ files (3 files)
     assert!(temp_dir.path().join(".claude/commands/spox/archive.md").exists());
-    assert!(temp_dir.path().join(".claude/commands/spox/orchestrate.md").exists());
-    assert!(temp_dir.path().join(".claude/commands/spox/proposal.md").exists());
+    assert!(temp_dir.path().join(".claude/commands/spox/implement.md").exists());
+    assert!(temp_dir.path().join(".claude/commands/spox/propose.md").exists());
 
     // specs/ structure
     assert!(temp_dir.path().join("specs/mission.md").exists());
