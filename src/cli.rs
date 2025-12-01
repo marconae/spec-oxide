@@ -20,6 +20,9 @@ pub enum Commands {
         path: Option<PathBuf>,
     },
 
+    /// Show project dashboard (human-friendly)
+    Show,
+
     /// Manage specs
     #[command(subcommand)]
     Spec(SpecCommands),
@@ -70,6 +73,10 @@ pub enum ChangeCommands {
     Show {
         /// Change ID to show
         id: Option<String>,
+
+        /// Show only delta requirements
+        #[arg(long)]
+        deltas_only: bool,
     },
 
     /// Validate changes

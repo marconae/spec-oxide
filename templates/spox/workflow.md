@@ -9,12 +9,17 @@ The user SHALL clarify gaps or ambiguities. Ask questions, NEVER assume.
 ## Quick Reference
 
 ```bash
+# Human dashboard (colored, verbose - not for AI agents)
+spox show                     # Project dashboard (human use)
+
+# Agent commands (token-efficient)
 spox config show              # Get folder paths (authoritative)
 spox spec list                # List specs
 spox spec show <id>           # View spec
+spox spec validate [<id>]     # Validate spec
 spox change list              # List active changes
-spox change show <id>         # View change (--json --deltas-only for parsing)
-spox change validate          # Validate before sharing
+spox change show <id>         # View change
+spox change validate [<id>]   # Validate change
 rg -n "pattern" specs         # Full-text search
 ```
 

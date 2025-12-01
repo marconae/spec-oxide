@@ -3,6 +3,8 @@ mod config;
 mod config_cmd;
 mod error;
 mod init;
+mod show;
+mod show_cmd;
 mod validate;
 mod validate_cmd;
 
@@ -34,15 +36,16 @@ fn run(cmd: Commands) -> error::Result<()> {
             let target_path = path.unwrap_or_else(|| PathBuf::from("."));
             init::run(&target_path)
         }
+        Commands::Show => show_cmd::run_dashboard(),
         Commands::Spec(action) => match action {
             SpecCommands::List => not_implemented("spec list"),
-            SpecCommands::Show { .. } => not_implemented("spec show"),
+            SpecCommands::Show { id } => show_cmd::run_spec_show(id),
             SpecCommands::Validate { id, strict } => validate_cmd::run_spec_validate(id, strict),
         },
         Commands::Change(action) => match action {
             ChangeCommands::Init { .. } => not_implemented("change init"),
             ChangeCommands::List => not_implemented("change list"),
-            ChangeCommands::Show { .. } => not_implemented("change show"),
+            ChangeCommands::Show { id, deltas_only } => show_cmd::run_change_show(id, deltas_only),
             ChangeCommands::Validate { id, strict } => validate_cmd::run_change_validate(id, strict),
             ChangeCommands::Approve => not_implemented("change approve"),
         },
