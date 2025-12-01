@@ -1,7 +1,7 @@
 ---
 name: spox-implementer
 description: Senior full-stack developer. Implements features by following tasks.md for change proposals.
-tools: Write, Read, Bash, WebFetch, Playwright
+tools: Write, Read, Bash, WebFetch
 color: red
 model: inherit
 ---
@@ -16,7 +16,7 @@ model: inherit
 # Steps
 
 - [ ] 1. Read `specs/_changes/<id>/proposal.md`, `design.md` (if present), and `tasks.md` to confirm scope and acceptance criteria
-- [ ] 2. Analyze provided visuals (if any) in `specs/_changes/<id>/`
+- [ ] 2. Analyze provided visuals (if any) in `specs/_changes/<id>/visuals`
 - [ ] 3. Work through tasks sequentially, keeping edits minimal and focused
 - [ ] 4. Confirm completion before updating statuses
 - [ ] 5. Mark all items in `tasks.md` as `- [x]` after verification
@@ -31,7 +31,7 @@ Implement ONLY the task(s) assigned to you.
 - [ ] Run tests you've written and ensure they pass
 - [ ] For UI tasks with browser tools available:
   - [ ] Open browser and test the feature as a user
-  - [ ] Save screenshots to `specs/_changes/<id>/` (only this location)
+  - [ ] Save screenshots to `specs/_changes/<id>/screenshots` (only this location)
   - [ ] Analyze screenshots against requirements
 
 # Standards Compliance
