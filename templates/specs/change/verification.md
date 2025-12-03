@@ -1,44 +1,47 @@
-# Verification Report: `[change-name]`
+# Verification: `[change-id]`
 
-**Date:** [Current Date]
-**Status:** Passed | Passed with Issues | Failed
+**Date:** YYYY-MM-DD | **Status:** ✅ Passed | ⚠️ Passed with Issues | ❌ Failed
 
-## Executive Summary
+## Summary
 
-[Brief 2-3 sentence overview of the verification results and overall implementation quality]
+[1-2 sentences: What was verified, overall result, key findings]
 
 ## Tasks
 
-**Status:** All Complete | Issues Found
+| Status | Complete | Incomplete |
+|--------|----------|------------|
+| [✅/⚠️/❌] | X/Y | [list or "None"] |
 
-### Completed Tasks
-- [x] Task Group 1: [Title]
-    - [x] Subtask 1.1
-    - [x] Subtask 1.2
-- [x] Task Group 2: [Title]
-    - [x] Subtask 2.1
+## Code Quality
 
-### Incomplete or Issues
-[List any tasks that were found incomplete or have issues, or note "None" if all complete]
+| Check | Status | Issues |
+|-------|--------|--------|
+| Formatter | ✅/❌ | [count or "Clean"] |
+| Linter | ✅/❌ | [count or "Clean"] |
+| Build | ✅/❌ | [exit code] |
 
-## Test Suite Results
+## Tests
 
-**Status:** All Passing | Some Failures | Critical Failures
+| Suite | Pass | Fail | Skip | Total |
+|-------|------|------|------|-------|
+| Unit | | | | |
+| Integration | | | | |
+| E2E | | | | |
+| **Total** | | | | |
 
-### Test Summary
-- **Unit Tests**
-  - **Total Tests:** [count]
-  - **Passing:** [count]
-  - **Failing:** [count]
-  - **Errors:** [count]
-- **Integration Tests**
-    - **Total Tests:** [count]
-    - **Passing:** [count]
-    - **Failing:** [count]
-    - **Errors:** [count]
+**Failed Tests:**
+- [test name]: [reason] — or "None"
 
-### Failed Tests
-[List any failing tests with their descriptions, or note "None - all tests passing"]
+## Remediations
 
-### Notes
-[Any additional context about test results, known issues, or regressions]
+| Issue | Action | Result |
+|-------|--------|--------|
+| [description] | Fixed / Spawned implementer | ✅/❌ |
+
+— or "None required"
+
+## Recommendation
+
+**Ready for archive:** Yes / No
+
+[If No: what must be resolved first]

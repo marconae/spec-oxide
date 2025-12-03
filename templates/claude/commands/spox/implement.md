@@ -1,35 +1,99 @@
 ---
 name: "Spec Oxide: Implement"
-description: Implement an approved Spec Oxide change and keep tasks in sync.
+description: Implement approved Spec Oxide changes by orchestrating subagents.
 category: Spec Oxide
-tags: [spox, implement]
+tags: [ spox, implement ]
 ---
 
-# Command: Implement
+## Goal
+
+**Build exactly what was approved—nothing more, nothing less.**
+
+You are implementing a change that has already been reviewed and approved. The proposal defines what to build; your job
+is to execute the tasks and keep `tasks.md` in sync with reality.
+
+The user provides approved change IDs (e.g., `add-two-factor-auth`) either directly in the prompt or as a list. Only
+implement changes that have been explicitly approved.
+
+If unclear, ask the user for confirmation before proceeding. Run `spox change list` to see active proposals and make
+suggestions.
 
 ## Guardrails
 
-- Minimal first; add complexity only when required
-- Tightly scoped to requested outcome
-- Check `.spox/workflow.md` for conventions (`ls .spox` if needed)
+- **Approved changes only.** Do not implement proposals that haven't been approved.
+- **Follow the spec.** The proposal and spec deltas are the contract—implement what they describe.
+- **Respect the scope.** Don't add features or "improvements" beyond what's specified.
+- **Keep tasks current.** Update `tasks.md` to reflect actual progress.
+- **Check project mission.** Ensure implementations align with `specs/mission.md`.
+- **Check conventions.** Read `.spox/standards/*` and read `.spox/workflow.md` if you need guidance.
 
 ## Steps
 
-Complete sequentially as TODOs:
+### 1. Confirm Approved Changes
 
-1. Read `specs/_changes/<id>/proposal.md`, `design.md`, `tasks.md` → confirm scope
-2. Spawn `implementer` subagent per task (parallelize if possible and as outlined in `task.md`)
-3. Verify all tasks complete before updating status
-4. Mark each task `- [x]` in `tasks.md`
-5. Spawn `implementation-verifier` for final report
+Get the change ID(s) from the user. If not provided, ask:
 
-## Commands
+> Which approved change(s) should I implement? Run `spox change list` to see active proposals.
+
+Verify each change exists and is ready:
 
 ```bash
-spox change list          # list changes
-spox change show <id>     # get proposal context
+spox change show <id>
+```
+
+### 2. Understand the Change
+
+For each approved change, read in order:
+
+1. `proposal.md` — Why this change exists, what's the impact
+2. `design.md` — Technical decisions (if present)
+3. `tasks.md` — The implementation checklist
+4. `spec.md` deltas for each capability — What exactly is changing
+
+Confirm scope matches what was approved before proceeding.
+
+### 3. Implement Tasks
+
+Work through `tasks.md` systematically:
+
+- **Parallelize** independent tasks by spawning `spox-implementer` subagents
+- **Sequence** dependent tasks as outlined in `tasks.md`
+- **Stay focused** on one task at a time per subagent
+
+### 4. Track Progress
+
+After each task completes:
+
+- Verify the work matches the spec
+- Mark the task `- [x]` in `tasks.md`
+- Note any blockers or deviations
+
+### 5. Verify Completion
+
+Before marking the change complete:
+
+- Confirm every task in `tasks.md` is marked `- [x]`
+- Spawn `spox-reviewer` agent for final correctness report
+- Address any issues found
+
+## Output
+
+When complete:
+
+- All tasks in `tasks.md` marked `- [x]`
+- Implementation matches spec deltas
+- Verification report confirms correctness
+
+**Do not archive.** The user will trigger archiving after deployment.
+
+## Quick Reference
+
+```bash
+spox change list          # List active changes
+spox change show <id>     # View proposal, tasks, specs
 ```
 
 ## Role
 
-You orchestrate. Subagents implement. Track progress, enforce guardrails.
+You are the **orchestrator**. You read specs, spawn subagents, track progress, and enforce guardrails. Subagents do the
+implementation work.
