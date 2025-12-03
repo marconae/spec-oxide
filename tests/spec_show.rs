@@ -408,7 +408,7 @@ This spec has no requirements defined.
 #[test]
 fn test_parse_actual_spec_file() {
     // Test with the actual cli spec file if it exists
-    let cli_spec_path = std::path::Path::new("openspec/specs/cli/spec.md");
+    let cli_spec_path = std::path::Path::new("../specs/cli/spec.md");
 
     if cli_spec_path.exists() {
         let result = common::show_spec(cli_spec_path);

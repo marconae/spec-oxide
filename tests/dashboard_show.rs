@@ -397,7 +397,7 @@ fn test_dashboard_initialized_project() {
     let root = temp.path().to_path_buf();
 
     // Create directory structure
-    let specs_dir = root.join("openspec/specs");
+    let specs_dir = root.join("../specs");
     let changes_dir = root.join("openspec/changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
@@ -447,7 +447,7 @@ fn test_dashboard_no_specs() {
     let root = temp.path().to_path_buf();
 
     // Create empty directories
-    let specs_dir = root.join("openspec/specs");
+    let specs_dir = root.join("../specs");
     let changes_dir = root.join("openspec/changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
@@ -477,7 +477,7 @@ fn test_dashboard_no_active_changes() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("openspec/specs");
+    let specs_dir = root.join("../specs");
     let changes_dir = root.join("openspec/changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
@@ -513,7 +513,7 @@ fn test_dashboard_excludes_archive() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("openspec/specs");
+    let specs_dir = root.join("../specs");
     let changes_dir = root.join("openspec/changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
@@ -553,7 +553,7 @@ fn test_dashboard_multiple_changes() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("openspec/specs");
+    let specs_dir = root.join("../specs");
     let changes_dir = root.join("openspec/changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
@@ -593,7 +593,7 @@ fn test_dashboard_singular_requirement() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("openspec/specs");
+    let specs_dir = root.join("../specs");
     let changes_dir = root.join("openspec/changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
