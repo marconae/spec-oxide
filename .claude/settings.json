@@ -1,0 +1,28 @@
+{
+  "env": {
+    "DISABLE_TELEMETRY": "1"
+  },
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(cargo:*)",
+      "Bash(openspec:*)",
+      "Bash(spox:*)",
+      "Bash(xargs:*)",
+      "Bash(nm:*)",
+      "Bash(tee:*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enableAllProjectMcpServers": true,
+  "fileExclusions": [
+    "target/**",
+    ".serena/**",
+    ".git/**"
+  ]
+}
