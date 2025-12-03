@@ -26,5 +26,6 @@ tmp
 .env
 
 # AI
-.claude
-openspec
+.ideas
+.claude/agents/spox-*
+.claude/commands/spox
