@@ -4,8 +4,9 @@
 [Describe your project's purpose and goals]
 
 ## Tech Stack
-- [List your primary technologies]
-- [e.g., TypeScript, React, Node.js]
+- [List your primary technologies, e.g., TypeScript, React, Node.js]
+- [Which tools to use to lint, test, and build the project?]
+- [Which tools to use for automatic code formatting?]
 
 ## Project Conventions
 

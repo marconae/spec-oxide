@@ -1,7 +1,7 @@
 ## General mindset
 
 - Consistent, discoverable directory structure
-- README + setup + architecture docs kept current
+- README docs kept current
 - Environment variables for config; never commit secrets
 - Minimal dependencies; justify additions
 - Feature flags over long-running branches
