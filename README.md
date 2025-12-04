@@ -1,7 +1,8 @@
-<p>
-  <img src="assets/spox-logo-light.svg" alt="Spec Oxide" width="180" align="left">
-  <h1>Spec Oxide</h1>
+<p align="center">
+  <img src="assets/spox-logo-light.svg" alt="Spec Oxide" width="250">
 </p>
+
+# Spec Oxide
 
 > Spec-driven development for humans and AI - optimized for Claude Code.
 
