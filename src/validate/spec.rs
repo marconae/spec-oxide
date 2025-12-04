@@ -25,11 +25,7 @@ pub fn validate_spec(path: &Path) -> ValidationReport {
     let content = match fs::read_to_string(path) {
         Ok(c) => c,
         Err(e) => {
-            report.add_error(
-                &file_path,
-                Some(1),
-                &format!("Failed to read file: {}", e),
-            );
+            report.add_error(&file_path, Some(1), &format!("Failed to read file: {}", e));
             return report;
         }
     };
@@ -154,8 +150,7 @@ fn parse_requirements(lines: &[&str], requirements_line: usize) -> Vec<Requireme
         // Check if we've entered a new level-2 section (end of Requirements)
         if i > requirements_line && trimmed.starts_with("## ") {
             // Save any pending scenario
-            if let (Some(ref mut req), Some(scenario)) =
-                (&mut current_req, current_scenario.take())
+            if let (Some(ref mut req), Some(scenario)) = (&mut current_req, current_scenario.take())
             {
                 req.scenarios.push(scenario);
             }
@@ -179,8 +174,7 @@ fn parse_requirements(lines: &[&str], requirements_line: usize) -> Vec<Requireme
         // Check for requirement header (### Requirement: Name)
         if trimmed.starts_with("### Requirement:") {
             // Save any pending scenario to previous requirement
-            if let (Some(ref mut req), Some(scenario)) =
-                (&mut current_req, current_scenario.take())
+            if let (Some(ref mut req), Some(scenario)) = (&mut current_req, current_scenario.take())
             {
                 req.scenarios.push(scenario);
             }
@@ -207,8 +201,7 @@ fn parse_requirements(lines: &[&str], requirements_line: usize) -> Vec<Requireme
         // Check for scenario header (#### Scenario: Name)
         if trimmed.starts_with("#### Scenario:") {
             // Save any pending scenario
-            if let (Some(ref mut req), Some(scenario)) =
-                (&mut current_req, current_scenario.take())
+            if let (Some(ref mut req), Some(scenario)) = (&mut current_req, current_scenario.take())
             {
                 req.scenarios.push(scenario);
             }

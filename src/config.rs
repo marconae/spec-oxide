@@ -31,9 +31,8 @@ impl Config {
             return Err(Error::ConfigNotFound(path.display().to_string()));
         }
 
-        let content = fs::read_to_string(path).map_err(|e| {
-            Error::ConfigParseError(format!("failed to read file: {}", e))
-        })?;
+        let content = fs::read_to_string(path)
+            .map_err(|e| Error::ConfigParseError(format!("failed to read file: {}", e)))?;
 
         let config: Config = toml::from_str(&content).map_err(|e| {
             let msg = e.message();

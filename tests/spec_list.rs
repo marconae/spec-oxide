@@ -113,14 +113,8 @@ fn test_spec_list_alphabetical_order() {
     let middle_pos = output_str.find("middle").unwrap();
     let zebra_pos = output_str.find("zebra").unwrap();
 
-    assert!(
-        alpha_pos < middle_pos,
-        "alpha should appear before middle"
-    );
-    assert!(
-        middle_pos < zebra_pos,
-        "middle should appear before zebra"
-    );
+    assert!(alpha_pos < middle_pos, "alpha should appear before middle");
+    assert!(middle_pos < zebra_pos, "middle should appear before zebra");
 }
 
 #[test]
@@ -382,10 +376,6 @@ fn test_spec_list_many_specs() {
     // Verify all 10 specs are listed
     for i in 1..=10 {
         let name = format!("spec-{:02}", i);
-        assert!(
-            output_str.contains(&name),
-            "Should contain spec: {}",
-            name
-        );
+        assert!(output_str.contains(&name), "Should contain spec: {}", name);
     }
 }

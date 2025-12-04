@@ -106,11 +106,7 @@ pub fn validate_change(change_dir: &Path) -> ChangeValidationResult {
         report.merge(tasks_report);
 
         // Add info about task completion statistics
-        report.add_info(
-            &tasks_file,
-            None,
-            &format!("{}", stats),
-        );
+        report.add_info(&tasks_file, None, &format!("{}", stats));
 
         Some(stats)
     } else {
@@ -158,10 +154,7 @@ pub fn validate_change(change_dir: &Path) -> ChangeValidationResult {
         );
     }
 
-    ChangeValidationResult {
-        report,
-        task_stats,
-    }
+    ChangeValidationResult { report, task_stats }
 }
 
 /// Validate proposal.md content.
@@ -271,9 +264,14 @@ fn validate_delta_spec(spec_path: &Path, spec_dir: &Path, report: &mut Validatio
         // Check if there are any header-like patterns that might be malformed
         let has_invalid_headers = lines.iter().any(|line| {
             let upper = line.to_uppercase();
-            (upper.contains("ADDED") || upper.contains("MODIFIED") || upper.contains("REMOVED") || upper.contains("RENAMED"))
+            (upper.contains("ADDED")
+                || upper.contains("MODIFIED")
+                || upper.contains("REMOVED")
+                || upper.contains("RENAMED"))
                 && line.trim().starts_with("##")
-                && !DELTA_HEADERS.iter().any(|h| line.trim().eq_ignore_ascii_case(h))
+                && !DELTA_HEADERS
+                    .iter()
+                    .any(|h| line.trim().eq_ignore_ascii_case(h))
         });
 
         if has_invalid_headers {
@@ -528,7 +526,8 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.2 Implement API endpoint
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(
@@ -549,7 +548,11 @@ The system SHALL allow users to perform the new action.
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("Missing proposal.md")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("Missing proposal.md")));
     }
 
     #[test]
@@ -585,7 +588,11 @@ The system SHALL allow users to perform the new action.
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("Missing tasks.md")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("Missing tasks.md")));
         assert!(result.task_stats.is_none());
     }
 
@@ -616,11 +623,16 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("Missing Why section")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("Missing Why section")));
     }
 
     #[test]
@@ -651,11 +663,16 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("Missing What Changes section")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("Missing What Changes section")));
     }
 
     #[test]
@@ -689,12 +706,17 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         // Should be valid (warnings don't fail validation)
         assert!(result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("Why section is too short")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("Why section is too short")));
     }
 
     #[test]
@@ -719,7 +741,11 @@ requested by many users. It will improve the overall user experience significant
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("at least one delta spec")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("at least one delta spec")));
     }
 
     #[test]
@@ -751,11 +777,16 @@ Some content.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("at least one delta spec")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("at least one delta spec")));
     }
 
     #[test]
@@ -785,12 +816,17 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         // Should be valid (warnings don't fail validation)
         assert!(result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("should have at least one scenario")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("should have at least one scenario")));
     }
 
     #[test]
@@ -824,11 +860,16 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("missing WHEN clause")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("missing WHEN clause")));
     }
 
     #[test]
@@ -862,11 +903,16 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("missing THEN clause")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("missing THEN clause")));
     }
 
     #[test]
@@ -895,12 +941,15 @@ requested by many users. It will improve the overall user experience significant
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         // Should be valid (warnings don't fail validation)
         assert!(result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("should include the complete requirement text")));
+        assert!(result.report.issues.iter().any(|i| i
+            .message
+            .contains("should include the complete requirement text")));
     }
 
     // ==================== Multiple delta sections tests ====================
@@ -951,7 +1000,8 @@ This requirement is no longer needed.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(
@@ -988,7 +1038,8 @@ The requirement has been renamed for clarity.
 - [ ] 1.1 Update references
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("rename", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("rename", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(
@@ -1005,7 +1056,11 @@ The requirement has been renamed for clarity.
         let path = Path::new("/nonexistent/path/to/change");
         let result = validate_change(path);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("does not exist")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("does not exist")));
     }
 
     #[test]
@@ -1016,7 +1071,11 @@ The requirement has been renamed for clarity.
 
         let result = validate_change(&file_path);
         assert!(!result.report.is_valid());
-        assert!(result.report.issues.iter().any(|i| i.message.contains("not a directory")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("not a directory")));
     }
 
     // ==================== Case insensitivity tests ====================
@@ -1053,7 +1112,8 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.1 Task
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(
@@ -1161,7 +1221,8 @@ The system SHALL allow users to perform the new action.
 - [ ] 1.4 Write tests
 "#;
 
-        let (_temp_dir, change_dir) = create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
+        let (_temp_dir, change_dir) =
+            create_temp_change_with_tasks(proposal, &[("feature-x", delta_spec)], Some(tasks));
 
         let result = validate_change(&change_dir);
         assert!(result.report.is_valid());
@@ -1173,6 +1234,10 @@ The system SHALL allow users to perform the new action.
         assert_eq!(stats.percentage(), 50);
 
         // Check that task stats info was added to report
-        assert!(result.report.issues.iter().any(|i| i.message.contains("Tasks: 2/4 completed")));
+        assert!(result
+            .report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("Tasks: 2/4 completed")));
     }
 }

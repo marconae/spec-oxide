@@ -27,7 +27,9 @@ pub fn run_spec_validate(id: Option<String>, strict: bool) -> Result<()> {
 
     if let Some(spec_id) = id {
         // Validate single spec
-        let spec_path = Path::new(&config.spec_folder).join(&spec_id).join("spec.md");
+        let spec_path = Path::new(&config.spec_folder)
+            .join(&spec_id)
+            .join("spec.md");
 
         if !spec_path.exists() {
             eprintln!("Spec '{}' not found at {}", spec_id, spec_path.display());
@@ -65,7 +67,11 @@ pub fn run_change_validate(id: Option<String>, strict: bool) -> Result<()> {
         let change_path = Path::new(&config.changes_folder).join(&change_id);
 
         if !change_path.exists() {
-            eprintln!("Change '{}' not found at {}", change_id, change_path.display());
+            eprintln!(
+                "Change '{}' not found at {}",
+                change_id,
+                change_path.display()
+            );
             std::process::exit(1);
         }
 
@@ -284,9 +290,20 @@ fn print_report_issues(report: &ValidationReport) {
 
     if report.errors > 0 || report.warnings > 0 {
         println!();
-        let error_word = if report.errors == 1 { "error" } else { "errors" };
-        let warning_word = if report.warnings == 1 { "warning" } else { "warnings" };
-        println!("{} {}, {} {}", report.errors, error_word, report.warnings, warning_word);
+        let error_word = if report.errors == 1 {
+            "error"
+        } else {
+            "errors"
+        };
+        let warning_word = if report.warnings == 1 {
+            "warning"
+        } else {
+            "warnings"
+        };
+        println!(
+            "{} {}, {} {}",
+            report.errors, error_word, report.warnings, warning_word
+        );
     }
 }
 

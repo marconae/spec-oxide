@@ -47,7 +47,9 @@ fn run(cmd: Commands) -> error::Result<()> {
             ChangeCommands::Init { .. } => not_implemented("change init"),
             ChangeCommands::List => list_cmd::run_change_list(),
             ChangeCommands::Show { id, deltas_only } => show_cmd::run_change_show(id, deltas_only),
-            ChangeCommands::Validate { id, strict } => validate_cmd::run_change_validate(id, strict),
+            ChangeCommands::Validate { id, strict } => {
+                validate_cmd::run_change_validate(id, strict)
+            }
             ChangeCommands::Approve => not_implemented("change approve"),
         },
         Commands::Config(action) => match action {

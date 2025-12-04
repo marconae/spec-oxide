@@ -69,11 +69,7 @@ pub fn validate_tasks(path: &Path) -> (ValidationReport, TaskStats) {
     let content = match fs::read_to_string(path) {
         Ok(c) => c,
         Err(e) => {
-            report.add_error(
-                &file_path,
-                Some(1),
-                &format!("Failed to read file: {}", e),
-            );
+            report.add_error(&file_path, Some(1), &format!("Failed to read file: {}", e));
             return (report, TaskStats::new());
         }
     };
@@ -132,7 +128,11 @@ pub fn validate_tasks_content(content: &str, file_name: &str) -> (ValidationRepo
 
     // Validation: Must have at least one task
     if tasks.is_empty() {
-        report.add_error(file_name, Some(1), "tasks.md must have at least one checkbox item");
+        report.add_error(
+            file_name,
+            Some(1),
+            "tasks.md must have at least one checkbox item",
+        );
     }
 
     // Validation: Tasks should use numbered prefixes
@@ -145,17 +145,16 @@ pub fn validate_tasks_content(content: &str, file_name: &str) -> (ValidationRepo
         report.add_warning(
             file_name,
             Some(line_number),
-            &format!("Task \"{}\" does not use numbered prefix (e.g., 1.1)", preview),
+            &format!(
+                "Task \"{}\" does not use numbered prefix (e.g., 1.1)",
+                preview
+            ),
         );
     }
 
     // Info: Task group headers organization
     if has_group_headers && !tasks.is_empty() {
-        report.add_info(
-            file_name,
-            None,
-            "Tasks are organized with group headers",
-        );
+        report.add_info(file_name, None, "Tasks are organized with group headers");
     }
 
     (report, stats)
@@ -525,7 +524,11 @@ mod tests {
 
         let (report, stats) = validate_tasks_content(content, "tasks.md");
 
-        assert!(report.is_valid(), "Expected valid tasks file, got errors: {:?}", report.issues);
+        assert!(
+            report.is_valid(),
+            "Expected valid tasks file, got errors: {:?}",
+            report.issues
+        );
         assert_eq!(stats.total, 6);
         assert_eq!(stats.completed, 2);
         assert_eq!(stats.percentage(), 33);
@@ -541,7 +544,10 @@ No tasks here yet.
         let (report, stats) = validate_tasks_content(content, "tasks.md");
 
         assert!(!report.is_valid());
-        assert!(report.issues.iter().any(|i| i.message.contains("must have at least one checkbox")));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("must have at least one checkbox")));
         assert_eq!(stats.total, 0);
         assert_eq!(stats.completed, 0);
     }
@@ -563,11 +569,15 @@ No tasks here yet.
         assert_eq!(stats.completed, 1);
 
         // Should have warnings about missing numbers
-        let warnings: Vec<_> = report.issues.iter()
+        let warnings: Vec<_> = report
+            .issues
+            .iter()
             .filter(|i| i.severity == super::super::Severity::Warning)
             .collect();
         assert_eq!(warnings.len(), 3);
-        assert!(warnings.iter().all(|w| w.message.contains("does not use numbered prefix")));
+        assert!(warnings
+            .iter()
+            .all(|w| w.message.contains("does not use numbered prefix")));
     }
 
     #[test]
@@ -640,10 +650,14 @@ No tasks here yet.
         assert_eq!(stats.total, 2);
 
         // Should have info about group headers
-        let infos: Vec<_> = report.issues.iter()
+        let infos: Vec<_> = report
+            .issues
+            .iter()
             .filter(|i| i.severity == super::super::Severity::Info)
             .collect();
-        assert!(infos.iter().any(|i| i.message.contains("organized with group headers")));
+        assert!(infos
+            .iter()
+            .any(|i| i.message.contains("organized with group headers")));
     }
 
     #[test]
@@ -657,7 +671,9 @@ No tasks here yet.
         let (report, _stats) = validate_tasks_content(content, "tasks.md");
 
         // Should NOT have info about group headers
-        let infos: Vec<_> = report.issues.iter()
+        let infos: Vec<_> = report
+            .issues
+            .iter()
             .filter(|i| i.severity == super::super::Severity::Info)
             .collect();
         assert!(infos.is_empty());
@@ -672,7 +688,9 @@ No tasks here yet.
 
         let (report, _stats) = validate_tasks_content(content, "tasks.md");
 
-        let warnings: Vec<_> = report.issues.iter()
+        let warnings: Vec<_> = report
+            .issues
+            .iter()
             .filter(|i| i.severity == super::super::Severity::Warning)
             .collect();
         assert_eq!(warnings.len(), 1);
@@ -685,7 +703,10 @@ No tasks here yet.
         let (report, stats) = validate_tasks(path);
 
         assert!(!report.is_valid());
-        assert!(report.issues.iter().any(|i| i.message.contains("Failed to read")));
+        assert!(report
+            .issues
+            .iter()
+            .any(|i| i.message.contains("Failed to read")));
         assert_eq!(stats.total, 0);
     }
 
@@ -701,9 +722,22 @@ No tasks here yet.
 
         for (content, expected_total, expected_completed, expected_percentage) in test_cases {
             let (_report, stats) = validate_tasks_content(content, "tasks.md");
-            assert_eq!(stats.total, expected_total, "Total mismatch for: {}", content);
-            assert_eq!(stats.completed, expected_completed, "Completed mismatch for: {}", content);
-            assert_eq!(stats.percentage(), expected_percentage, "Percentage mismatch for: {}", content);
+            assert_eq!(
+                stats.total, expected_total,
+                "Total mismatch for: {}",
+                content
+            );
+            assert_eq!(
+                stats.completed, expected_completed,
+                "Completed mismatch for: {}",
+                content
+            );
+            assert_eq!(
+                stats.percentage(),
+                expected_percentage,
+                "Percentage mismatch for: {}",
+                content
+            );
         }
     }
 
@@ -739,7 +773,11 @@ No tasks here yet.
 
         let (report, stats) = validate_tasks_content(content, "tasks.md");
 
-        assert!(report.is_valid(), "Expected valid tasks file, got: {:?}", report.issues);
+        assert!(
+            report.is_valid(),
+            "Expected valid tasks file, got: {:?}",
+            report.issues
+        );
         assert_eq!(stats.total, 17);
         assert_eq!(stats.completed, 7);
         assert_eq!(stats.percentage(), 41);

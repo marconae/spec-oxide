@@ -2,15 +2,14 @@
 
 ## Purpose
 
-Define the `spox init` command that bootstraps a new Spec Oxide project by creating the directory structure, copying
-template files for specs/changes/agents/commands, and preserving existing Claude Code configuration.
+Define the `spox init` command that bootstraps a new Spec Oxide project or updates an existing one by creating the
+directory structure, copying template files for specs/changes/agents/commands, and managing CLAUDE.md configuration.
 
 ## Requirements
 
 ### Requirement: Project Initialization
 
-The `spox init` command SHALL bootstrap a new Spec Oxide project by creating the required directory structure and
-copying template files.
+The `spox init` command SHALL bootstrap a new Spec Oxide project or update an existing one by creating the required directory structure and copying template files.
 
 #### Scenario: Initialize in current directory
 
@@ -30,47 +29,57 @@ copying template files.
 - **THEN** the command creates the project structure at the specified path
 - **AND** creates all directories relative to that path
 
-#### Scenario: Initialize already-initialized project
+#### Scenario: Update existing project
 
 - **WHEN** user runs `spox init` in a directory that already has `.spox/`
-- **THEN** the command exits with code 1
-- **AND** prints an error message indicating project is already initialized
+- **THEN** the command updates agents, commands, and standards to latest templates
+- **AND** preserves existing `specs/mission.md`
+- **AND** does not modify any files in `specs/`, `specs/_changes/`, or `specs/_archive/`
+- **AND** exits with code 0
+- **AND** prints update success message
 
 ### Requirement: Template File Copying
 
-The `spox init` command SHALL copy all template files from bundled templates to the project directory.
+The `spox init` command SHALL copy all template files from bundled templates to the project directory, always updating tooling files.
 
 #### Scenario: Standards templates copied
 
-- **WHEN** initialization completes successfully
+- **WHEN** initialization or update completes successfully
 - **THEN** all files from `templates/spox/standards/` exist in `.spox/standards/`
-- **AND** file contents match the embedded templates
+- **AND** file contents match the embedded templates (overwriting existing)
 
 #### Scenario: Workflow template copied
 
-- **WHEN** initialization completes successfully
+- **WHEN** initialization or update completes successfully
 - **THEN** `.spox/workflow.md` exists with content from `templates/spox/workflow.md`
 
 #### Scenario: Claude Code agents copied
 
-- **WHEN** initialization completes successfully
+- **WHEN** initialization or update completes successfully
 - **THEN** all files from `templates/claude/agents/` exist in `.claude/agents/` (flat, not in subfolder)
 - **AND** agent files retain their `spox-` prefix (e.g., `spox-implementer.md`)
+- **AND** existing spox agent files are overwritten with latest templates
 
 #### Scenario: Claude Code commands copied
 
-- **WHEN** initialization completes successfully
+- **WHEN** initialization or update completes successfully
 - **THEN** all files from `templates/claude/commands/spox/` exist in `.claude/commands/spox/`
 - **AND** command files use correct names (`propose.md`, `implement.md`, `archive.md`)
+- **AND** existing spox command files are overwritten with latest templates
 
-#### Scenario: Mission template copied
+#### Scenario: Mission template copied only on fresh init
 
-- **WHEN** initialization completes successfully
+- **WHEN** initialization completes successfully on a fresh project
 - **THEN** `specs/mission.md` exists with content from `templates/specs/mission.md`
+
+#### Scenario: Mission template preserved on update
+
+- **WHEN** update runs on existing project with `specs/mission.md`
+- **THEN** existing `specs/mission.md` is not modified
 
 #### Scenario: Spec templates copied to .spox
 
-- **WHEN** initialization completes successfully
+- **WHEN** initialization or update completes successfully
 - **THEN** `.spox/specs/` directory exists
 - **AND** `.spox/specs/spec.md` exists with content from `templates/specs/spec.md`
 - **AND** `.spox/specs/mission.md` exists with content from `templates/specs/mission.md`
@@ -100,19 +109,23 @@ The `spox init` command SHALL create spec directories based on the default confi
 - **WHEN** initialization completes successfully
 - **THEN** the directory specified by `archive_folder` config (default: `specs/_archive`) exists
 
-### Requirement: Claude Integration Preservation
+### Requirement: CLAUDE.md Template Handling
 
-The `spox init` command SHALL NOT overwrite existing Claude Code configuration files.
+The `spox init` command SHALL create or update the project's CLAUDE.md file with Spec Oxide instructions.
 
-#### Scenario: Existing Claude agents preserved
+#### Scenario: Fresh project without CLAUDE.md
 
-- **WHEN** user runs `spox init` and `.claude/agents/` already contains files
-- **THEN** existing agent files are not overwritten
-- **AND** new spox-prefixed agents are added to `.claude/agents/`
+- **WHEN** `spox init` runs in a directory without CLAUDE.md
+- **THEN** CLAUDE.md is created from the bundled template
 
-#### Scenario: Existing Claude commands preserved
+#### Scenario: Existing CLAUDE.md without SPOX markers
 
-- **WHEN** user runs `spox init` and `.claude/commands/` already contains files
-- **THEN** existing command files are not overwritten
-- **AND** new spox commands are added to `.claude/commands/spox/`
+- **WHEN** `spox init` runs in a directory with CLAUDE.md that lacks SPOX markers
+- **THEN** the SPOX block is appended to the end of the existing file
+- **AND** existing content is preserved
 
+#### Scenario: Existing CLAUDE.md with SPOX markers
+
+- **WHEN** `spox init` runs in a directory with CLAUDE.md containing `<!-- SPOX:START -->` and `<!-- SPOX:END -->` markers
+- **THEN** the content between markers is replaced with the bundled template block
+- **AND** content outside the markers is preserved

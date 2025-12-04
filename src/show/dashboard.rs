@@ -77,8 +77,8 @@ pub fn gather_specs(spec_folder: &str) -> Result<Vec<SpecSummary>, String> {
 
     let mut specs = Vec::new();
 
-    let entries = fs::read_dir(spec_path)
-        .map_err(|e| format!("Failed to read spec folder: {}", e))?;
+    let entries =
+        fs::read_dir(spec_path).map_err(|e| format!("Failed to read spec folder: {}", e))?;
 
     for entry in entries.filter_map(|e| e.ok()) {
         let path = entry.path();
@@ -148,8 +148,8 @@ pub fn gather_changes(changes_folder: &str) -> Result<Vec<ChangeSummary>, String
 
     let mut changes = Vec::new();
 
-    let entries = fs::read_dir(changes_path)
-        .map_err(|e| format!("Failed to read changes folder: {}", e))?;
+    let entries =
+        fs::read_dir(changes_path).map_err(|e| format!("Failed to read changes folder: {}", e))?;
 
     for entry in entries.filter_map(|e| e.ok()) {
         let path = entry.path();
@@ -355,11 +355,7 @@ pub fn format_dashboard(info: &DashboardInfo) -> String {
     output.push_str("\n\n");
 
     // Specs section
-    output.push_str(&format!(
-        "{} {}\n",
-        yellow("Specs:"),
-        info.specs.len()
-    ));
+    output.push_str(&format!("{} {}\n", yellow("Specs:"), info.specs.len()));
 
     if info.specs.is_empty() {
         output.push_str(&format!("  {}\n", dim("(no specs)")));

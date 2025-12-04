@@ -217,7 +217,7 @@ fn test_init_with_custom_path() {
 }
 
 #[test]
-fn test_init_fails_if_already_initialized() {
+fn test_reinit_succeeds() {
     let temp_dir = TempDir::new().unwrap();
 
     // First init succeeds
@@ -228,14 +228,172 @@ fn test_init_fails_if_already_initialized() {
         .assert()
         .success();
 
-    // Second init fails with appropriate error message
+    // Second init should also succeed (not fail)
     spox_cmd()
         .arg("init")
         .arg("--path")
         .arg(temp_dir.path())
         .assert()
-        .failure()
-        .stderr(predicate::str::contains("already initialized"));
+        .success();
+}
+
+#[test]
+fn test_reinit_preserves_mission_md() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // First init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Modify specs/mission.md with custom content
+    let mission_path = temp_dir.path().join("specs/mission.md");
+    let custom_content = "# My Custom Mission\n\nThis is my custom project mission.\n";
+    std::fs::write(&mission_path, custom_content).unwrap();
+
+    // Second init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify specs/mission.md still has custom content
+    let content = std::fs::read_to_string(&mission_path).unwrap();
+    assert_eq!(content, custom_content);
+}
+
+#[test]
+fn test_reinit_overwrites_agents() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // First init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Modify .claude/agents/spox-implementer.md with custom content
+    let agent_path = temp_dir.path().join(".claude/agents/spox-implementer.md");
+    let original_content = std::fs::read_to_string(&agent_path).unwrap();
+    let custom_content = "# Custom Agent\n\nThis has been modified.\n";
+    std::fs::write(&agent_path, custom_content).unwrap();
+
+    // Second init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify .claude/agents/spox-implementer.md has been reset to template
+    let content = std::fs::read_to_string(&agent_path).unwrap();
+    assert_ne!(content, custom_content);
+    assert_eq!(content, original_content);
+}
+
+#[test]
+fn test_reinit_overwrites_commands() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // First init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Modify .claude/commands/spox/implement.md with custom content
+    let command_path = temp_dir.path().join(".claude/commands/spox/implement.md");
+    let original_content = std::fs::read_to_string(&command_path).unwrap();
+    let custom_content = "# Custom Command\n\nThis has been modified.\n";
+    std::fs::write(&command_path, custom_content).unwrap();
+
+    // Second init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify .claude/commands/spox/implement.md has been reset to template
+    let content = std::fs::read_to_string(&command_path).unwrap();
+    assert_ne!(content, custom_content);
+    assert_eq!(content, original_content);
+}
+
+#[test]
+fn test_reinit_overwrites_standards() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // First init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Modify .spox/standards/coding.md with custom content
+    let standards_path = temp_dir.path().join(".spox/standards/coding.md");
+    let original_content = std::fs::read_to_string(&standards_path).unwrap();
+    let custom_content = "# Custom Standards\n\nThis has been modified.\n";
+    std::fs::write(&standards_path, custom_content).unwrap();
+
+    // Second init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify .spox/standards/coding.md has been reset to template
+    let content = std::fs::read_to_string(&standards_path).unwrap();
+    assert_ne!(content, custom_content);
+    assert_eq!(content, original_content);
+}
+
+#[test]
+fn test_reinit_does_not_touch_specs_directory() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // First init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Create custom file in specs/_changes/my-change/proposal.md
+    let change_dir = temp_dir.path().join("specs/_changes/my-change");
+    std::fs::create_dir_all(&change_dir).unwrap();
+    let proposal_path = change_dir.join("proposal.md");
+    let custom_content = "# My Change Proposal\n\nThis is a custom proposal.\n";
+    std::fs::write(&proposal_path, custom_content).unwrap();
+
+    // Second init
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify custom file still exists with original content
+    assert!(proposal_path.exists());
+    let content = std::fs::read_to_string(&proposal_path).unwrap();
+    assert_eq!(content, custom_content);
 }
 
 #[test]
@@ -423,21 +581,48 @@ fn test_init_verifies_all_files_copied_correctly() {
     // .spox/specs/ files (2 files + change subdirectory with 5 files)
     assert!(temp_dir.path().join(".spox/specs/spec.md").exists());
     assert!(temp_dir.path().join(".spox/specs/mission.md").exists());
-    assert!(temp_dir.path().join(".spox/specs/change/proposal.md").exists());
+    assert!(temp_dir
+        .path()
+        .join(".spox/specs/change/proposal.md")
+        .exists());
     assert!(temp_dir.path().join(".spox/specs/change/tasks.md").exists());
-    assert!(temp_dir.path().join(".spox/specs/change/design.md").exists());
+    assert!(temp_dir
+        .path()
+        .join(".spox/specs/change/design.md")
+        .exists());
     assert!(temp_dir.path().join(".spox/specs/change/spec.md").exists());
-    assert!(temp_dir.path().join(".spox/specs/change/verification.md").exists());
+    assert!(temp_dir
+        .path()
+        .join(".spox/specs/change/verification.md")
+        .exists());
 
     // .claude/agents/ files (3 files with spox- prefix)
-    assert!(temp_dir.path().join(".claude/agents/spox-implementer.md").exists());
-    assert!(temp_dir.path().join(".claude/agents/spox-reviewer.md").exists());
-    assert!(temp_dir.path().join(".claude/agents/spox-verifier.md").exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/agents/spox-implementer.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/agents/spox-reviewer.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/agents/spox-verifier.md")
+        .exists());
 
     // .claude/commands/spox/ files (3 files)
-    assert!(temp_dir.path().join(".claude/commands/spox/archive.md").exists());
-    assert!(temp_dir.path().join(".claude/commands/spox/implement.md").exists());
-    assert!(temp_dir.path().join(".claude/commands/spox/propose.md").exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/commands/spox/archive.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/commands/spox/implement.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/commands/spox/propose.md")
+        .exists());
 
     // specs/ structure
     assert!(temp_dir.path().join("specs/mission.md").exists());
@@ -466,6 +651,96 @@ fn test_init_output_shows_created_structure() {
         .stdout(predicate::str::contains("mission.md"))
         .stdout(predicate::str::contains("_changes/"))
         .stdout(predicate::str::contains("_archive/"));
+}
+
+#[test]
+fn test_init_creates_claude_md() {
+    let temp_dir = TempDir::new().unwrap();
+
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify CLAUDE.md exists
+    let claude_md_path = temp_dir.path().join("CLAUDE.md");
+    assert!(claude_md_path.exists());
+    assert!(claude_md_path.is_file());
+
+    // Verify content contains SPOX markers
+    let content = std::fs::read_to_string(&claude_md_path).unwrap();
+    assert!(content.contains("<!-- SPOX:START -->"));
+    assert!(content.contains("<!-- SPOX:END -->"));
+}
+
+#[test]
+fn test_init_appends_spox_block_to_existing_claude_md() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create existing CLAUDE.md without SPOX markers
+    let claude_md_path = temp_dir.path().join("CLAUDE.md");
+    let original_content = "# My Project\n\nCustom instructions.\n";
+    std::fs::write(&claude_md_path, original_content).unwrap();
+
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify original content is preserved at the start
+    let content = std::fs::read_to_string(&claude_md_path).unwrap();
+    assert!(content.starts_with("# My Project"));
+    assert!(content.contains("Custom instructions."));
+
+    // Verify SPOX markers were added after original content
+    assert!(content.contains("<!-- SPOX:START -->"));
+    assert!(content.contains("<!-- SPOX:END -->"));
+
+    // Verify SPOX block appears after original content
+    let original_end = content.find("Custom instructions.").unwrap();
+    let spox_start = content.find("<!-- SPOX:START -->").unwrap();
+    assert!(spox_start > original_end);
+}
+
+#[test]
+fn test_init_replaces_spox_block_in_existing_claude_md() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create existing CLAUDE.md with old SPOX block
+    let claude_md_path = temp_dir.path().join("CLAUDE.md");
+    let existing_content =
+        "# Header\n\n<!-- SPOX:START -->\nOld content\n<!-- SPOX:END -->\n\n# Footer\n";
+    std::fs::write(&claude_md_path, existing_content).unwrap();
+
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    let content = std::fs::read_to_string(&claude_md_path).unwrap();
+
+    // Verify header is preserved
+    assert!(content.contains("# Header"));
+
+    // Verify footer is preserved
+    assert!(content.contains("# Footer"));
+
+    // Verify old content between markers was replaced
+    assert!(!content.contains("Old content"));
+
+    // Verify SPOX:START appears exactly once (block was replaced, not appended)
+    let start_marker_count = content.matches("<!-- SPOX:START -->").count();
+    assert_eq!(
+        start_marker_count, 1,
+        "Expected exactly 1 SPOX:START marker, found {}",
+        start_marker_count
+    );
 }
 
 // =============================================================================

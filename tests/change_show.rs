@@ -413,11 +413,7 @@ mod common {
                         item.operation.label()
                     ));
                 } else {
-                    output.push_str(&format!(
-                        "  {} {}\n",
-                        item.operation.symbol(),
-                        item.name
-                    ));
+                    output.push_str(&format!("  {} {}\n", item.operation.symbol(), item.name));
                 }
 
                 if !item.text.is_empty() {
