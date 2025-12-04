@@ -17,7 +17,8 @@
 ///
 /// Returns `Some((line_number, section_content))` if found, `None` otherwise.
 /// Line numbers are 1-indexed.
-pub fn find_section(content: &str, header: &str) -> Option<(usize, String)> {
+#[cfg(test)]
+fn find_section(content: &str, header: &str) -> Option<(usize, String)> {
     let lines: Vec<&str> = content.lines().collect();
     let target = format!("## {}", header);
 
@@ -56,7 +57,8 @@ pub fn find_section(content: &str, header: &str) -> Option<(usize, String)> {
 ///
 /// Returns a vector of `(line_number, name, section_content)` tuples.
 /// Line numbers are 1-indexed.
-pub fn find_subsections(content: &str, prefix: &str) -> Vec<(usize, String, String)> {
+#[cfg(test)]
+fn find_subsections(content: &str, prefix: &str) -> Vec<(usize, String, String)> {
     let lines: Vec<&str> = content.lines().collect();
     let target_prefix = format!("### {}", prefix);
     let mut results = Vec::new();

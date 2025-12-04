@@ -162,6 +162,7 @@ pub fn validate_tasks_content(content: &str, file_name: &str) -> (ValidationRepo
 
 /// A parsed checkbox task item.
 #[derive(Debug)]
+#[allow(dead_code)] // Fields reserved for future validation features
 struct ParsedTask {
     /// Line number where the task appears (1-indexed).
     line: usize,
