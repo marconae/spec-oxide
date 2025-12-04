@@ -106,6 +106,7 @@ the new session-based authentication system.
 "#;
 
 /// Valid delta spec content for RENAMED requirements.
+#[allow(dead_code)]
 const VALID_DELTA_SPEC_RENAMED: &str = r#"# Naming Update Delta
 
 ## RENAMED Requirements

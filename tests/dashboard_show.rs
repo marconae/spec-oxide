@@ -1,7 +1,6 @@
 //! Integration tests for `spox show` dashboard functionality.
 
 use std::fs;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 // Re-export the modules we need for testing
@@ -121,7 +120,7 @@ Testing dashboard.
 }
 
 /// Helper to run show_dashboard via the library function
-fn run_dashboard(root: &PathBuf) -> Result<String, String> {
+fn run_dashboard(root: &std::path::Path) -> Result<String, String> {
     // Load config from the temp directory
     let config_path = root.join("spox.toml");
     let config_content =
@@ -397,13 +396,13 @@ fn test_dashboard_initialized_project() {
     let root = temp.path().to_path_buf();
 
     // Create directory structure
-    let specs_dir = root.join("../specs");
-    let changes_dir = root.join("openspec/changes");
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
 
     // Create config
-    common::create_config(&root, "openspec/specs", "openspec/changes");
+    common::create_config(&root, "specs", "specs/_changes");
 
     // Create specs
     common::create_spec(&specs_dir, "auth", &["login", "logout", "session", "token"]);
@@ -447,13 +446,13 @@ fn test_dashboard_no_specs() {
     let root = temp.path().to_path_buf();
 
     // Create empty directories
-    let specs_dir = root.join("../specs");
-    let changes_dir = root.join("openspec/changes");
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
 
     // Create config
-    common::create_config(&root, "openspec/specs", "openspec/changes");
+    common::create_config(&root, "specs", "specs/_changes");
 
     // Run dashboard
     let output = run_dashboard(&root).expect("Dashboard should succeed");
@@ -477,13 +476,13 @@ fn test_dashboard_no_active_changes() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("../specs");
-    let changes_dir = root.join("openspec/changes");
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
 
     // Create config
-    common::create_config(&root, "openspec/specs", "openspec/changes");
+    common::create_config(&root, "specs", "specs/_changes");
 
     // Create specs but no changes
     common::create_spec(&specs_dir, "cli", &["parse", "execute", "help", "version"]);
@@ -513,13 +512,13 @@ fn test_dashboard_excludes_archive() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("../specs");
-    let changes_dir = root.join("openspec/changes");
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
 
     // Create config
-    common::create_config(&root, "openspec/specs", "openspec/changes");
+    common::create_config(&root, "specs", "specs/_changes");
 
     // Create an active change
     common::create_change(&changes_dir, "active-change", 1, 3, None);
@@ -553,13 +552,13 @@ fn test_dashboard_multiple_changes() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("../specs");
-    let changes_dir = root.join("openspec/changes");
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
 
     // Create config
-    common::create_config(&root, "openspec/specs", "openspec/changes");
+    common::create_config(&root, "specs", "specs/_changes");
 
     // Create multiple changes
     common::create_change(&changes_dir, "aaa-first", 0, 2, None);
@@ -593,13 +592,13 @@ fn test_dashboard_singular_requirement() {
     let root = temp.path().to_path_buf();
 
     // Create directories
-    let specs_dir = root.join("../specs");
-    let changes_dir = root.join("openspec/changes");
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
     fs::create_dir_all(&specs_dir).unwrap();
     fs::create_dir_all(&changes_dir).unwrap();
 
     // Create config
-    common::create_config(&root, "openspec/specs", "openspec/changes");
+    common::create_config(&root, "specs", "specs/_changes");
 
     // Create spec with single requirement
     common::create_spec(&specs_dir, "simple", &["only-one"]);

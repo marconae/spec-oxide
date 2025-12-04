@@ -353,19 +353,19 @@ mod common {
         output.push_str(&format!("+{}+\n", "-".repeat(59)));
         output.push_str(&format!("| Change: {:<49} |\n", change.name));
         output.push_str(&format!("+{}+\n", "-".repeat(59)));
-        output.push_str("\n");
+        output.push('\n');
 
         output.push_str("Why:\n");
         for line in change.why.lines() {
             output.push_str(&format!("  {}\n", line));
         }
-        output.push_str("\n");
+        output.push('\n');
 
         output.push_str("What Changes:\n");
         for line in change.what_changes.lines() {
             output.push_str(&format!("  {}\n", line));
         }
-        output.push_str("\n");
+        output.push('\n');
 
         if change.tasks_total > 0 {
             let percentage = (change.tasks_completed * 100) / change.tasks_total;
@@ -389,7 +389,7 @@ mod common {
                         item.name
                     ));
                 }
-                output.push_str("\n");
+                output.push('\n');
             }
         }
 
@@ -425,7 +425,7 @@ mod common {
                     output.push_str(&format!("    Scenarios: {}\n", scenarios_str));
                 }
 
-                output.push_str("\n");
+                output.push('\n');
             }
         }
 
