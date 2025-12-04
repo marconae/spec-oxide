@@ -13,6 +13,15 @@
 - Avoid frameworks without clear justification
 - Choose boring, proven patterns
 
+## Verification
+
+Adhere to the following rules:
+- Use Test Driven Development (TDD)
+- **Always plan and implement** Unit Tests
+- Aim for >80% code coverage with Unit Tests (both lines and branches)
+- **Always plan and implement** Integration Tests
+- Integration Tests SHALL cover requirements and scenarios
+
 ## Complexity Triggers
 Only add complexity with:
 - Performance data showing current solution too slow
