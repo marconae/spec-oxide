@@ -5,6 +5,20 @@ category: Spec Oxide
 tags: [ spox, implement ]
 ---
 
+## Standards Compliance
+
+Read and **ensure** your work aligns with the following standards, conventions, rules and workflows:
+
+- @.spox/standards/mcp.md — MCP tool preferences
+- @.spox/standards/global.md — Cross-cutting standards
+- @.spox/standards/coding.md — General coding conventions
+- @.spox/standards/testing.md — TDD rules and verification
+- @.spox/standards/backend.md — API, database, and query standards
+- @.spox/standards/frontend.md — UI components, CSS, responsive design
+- @.spox/standards/vcs.md — Version control standards
+- @.spox/workflow.md — Spex Oxide (SpOx) workflow
+- @specs/mission.md — Project mission, goals and high-level architecture
+
 ## Goal
 
 **Build exactly what was approved—nothing more, nothing less.**
@@ -23,9 +37,7 @@ suggestions.
 - **Approved changes only.** Do not implement proposals that haven't been approved.
 - **Follow the spec.** The proposal and spec deltas are the contract—implement what they describe.
 - **Respect the scope.** Don't add features or "improvements" beyond what's specified.
-- **Keep tasks current.** Update `tasks.md` to reflect actual progress.
-- **Check project mission.** Ensure implementations align with `specs/mission.md`.
-- **Check conventions.** Read `.spox/standards/*` and read `.spox/workflow.md` if you need guidance.
+- **Keep tasks current.** Update `tasks.md` to reflect actual progress, but do not summarize the work (this is done by the verifier)
 
 ## Steps
 
@@ -73,7 +85,7 @@ After each task completes:
 Before marking the change complete:
 
 - Confirm every task in `tasks.md` is marked `- [x]`
-- Spawn `spox-reviewer` agent for final correctness report
+- Spawn `spox-verifier` agent for final verification report
 - Address any issues found
 
 ## Output
