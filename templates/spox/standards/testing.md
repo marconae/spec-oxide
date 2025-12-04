@@ -2,7 +2,7 @@
 
 ### The Law
 
-**NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.**
+**Test Driven Development. NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.**
 
 Write code before test? Delete it. Start over. No exceptions.
 
@@ -13,29 +13,35 @@ RED → verify fails → GREEN → verify passes → REFACTOR → repeat
 ```
 
 #### RED: Write Failing Test
+
 - One behavior per test
 - Clear descriptive name
 - Real code, minimal mocks
 
 #### Verify RED (MANDATORY)
+
 ```bash
 npm test path/to/test.test.ts  # or equivalent
 ```
+
 - Must fail (not error)
 - Fails because feature missing, not typos
 - Test passes? Fix the test.
 
 #### GREEN: Minimal Code
+
 - Simplest code to pass
 - No extra features
 - No "improvements"
 
 #### Verify GREEN (MANDATORY)
+
 - Test passes
 - All other tests pass
 - No warnings/errors
 
 #### REFACTOR
+
 - Only after green
 - Remove duplication, improve names
 - Keep tests green
@@ -43,12 +49,12 @@ npm test path/to/test.test.ts  # or equivalent
 
 ### Good Tests
 
-| ✓ | ✗ |
-|---|---|
-| One thing | "and" in name |
+| ✓              | ✗                    |
+|----------------|----------------------|
+| One thing      | "and" in name        |
 | Tests behavior | Tests implementation |
-| Clear intent | Vague names |
-| Real code | Mock everything |
+| Clear intent   | Vague names          |
+| Real code      | Mock everything      |
 
 ### Bug Fixes
 
@@ -68,12 +74,12 @@ npm test path/to/test.test.ts  # or equivalent
 
 ### When Stuck
 
-| Problem | Solution |
-|---------|----------|
+| Problem                | Solution                   |
+|------------------------|----------------------------|
 | Don't know how to test | Write wished-for API first |
-| Test too complicated | Simplify interface |
-| Must mock everything | Use dependency injection |
-| Huge test setup | Simplify design |
+| Test too complicated   | Simplify interface         |
+| Must mock everything   | Use dependency injection   |
+| Huge test setup        | Simplify design            |
 
 ### Checklist Before Done
 
