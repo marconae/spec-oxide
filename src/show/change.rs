@@ -125,10 +125,7 @@ pub fn parse_change(change_dir: &Path) -> Result<ChangeInfo, String> {
     }
 
     if !change_dir.is_dir() {
-        return Err(format!(
-            "Path is not a directory: {}",
-            change_dir.display()
-        ));
+        return Err(format!("Path is not a directory: {}", change_dir.display()));
     }
 
     // Parse proposal.md
@@ -137,16 +134,16 @@ pub fn parse_change(change_dir: &Path) -> Result<ChangeInfo, String> {
         return Err("Missing proposal.md".to_string());
     }
 
-    let proposal_content =
-        fs::read_to_string(&proposal_path).map_err(|e| format!("Failed to read proposal.md: {}", e))?;
+    let proposal_content = fs::read_to_string(&proposal_path)
+        .map_err(|e| format!("Failed to read proposal.md: {}", e))?;
 
     let (why, what_changes) = parse_proposal(&proposal_content);
 
     // Parse tasks.md
     let tasks_path = change_dir.join("tasks.md");
     let (tasks_completed, tasks_total) = if tasks_path.exists() {
-        let tasks_content =
-            fs::read_to_string(&tasks_path).map_err(|e| format!("Failed to read tasks.md: {}", e))?;
+        let tasks_content = fs::read_to_string(&tasks_path)
+            .map_err(|e| format!("Failed to read tasks.md: {}", e))?;
         parse_tasks(&tasks_content)
     } else {
         (0, 0)

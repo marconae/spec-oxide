@@ -40,8 +40,8 @@ pub struct RequirementInfo {
 /// # Returns
 /// A `SpecInfo` struct or an error string.
 pub fn parse_spec(path: &Path) -> Result<SpecInfo, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|e| format!("Failed to read spec file: {}", e))?;
+    let content =
+        fs::read_to_string(path).map_err(|e| format!("Failed to read spec file: {}", e))?;
 
     parse_spec_content(&content)
 }
@@ -148,7 +148,10 @@ fn extract_requirements(lines: &[&str]) -> Vec<RequirementInfo> {
         }
 
         // Stop at next level-2 header (outside Requirements)
-        if in_requirements && trimmed.starts_with("## ") && !trimmed.eq_ignore_ascii_case("## Requirements") {
+        if in_requirements
+            && trimmed.starts_with("## ")
+            && !trimmed.eq_ignore_ascii_case("## Requirements")
+        {
             // Save current requirement if any
             if let Some(req) = current_req.take() {
                 requirements.push(req);

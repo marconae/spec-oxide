@@ -81,7 +81,11 @@ impl std::fmt::Display for ValidationIssue {
             Some(line) => format!("{}:{}", self.file, line),
             None => self.file.clone(),
         };
-        write!(f, "  {:5}  {:<20} {}", self.severity, location, self.message)
+        write!(
+            f,
+            "  {:5}  {:<20} {}",
+            self.severity, location, self.message
+        )
     }
 }
 
@@ -111,14 +115,16 @@ impl ValidationReport {
 
     /// Add an error issue to the report.
     pub fn add_error(&mut self, file: &str, line: Option<usize>, message: &str) {
-        self.issues.push(ValidationIssue::error(file, line, message));
+        self.issues
+            .push(ValidationIssue::error(file, line, message));
         self.errors += 1;
         self.valid = false;
     }
 
     /// Add a warning issue to the report.
     pub fn add_warning(&mut self, file: &str, line: Option<usize>, message: &str) {
-        self.issues.push(ValidationIssue::warning(file, line, message));
+        self.issues
+            .push(ValidationIssue::warning(file, line, message));
         self.warnings += 1;
     }
 

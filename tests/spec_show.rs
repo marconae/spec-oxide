@@ -107,7 +107,10 @@ mod common {
                 continue;
             }
 
-            if in_requirements && trimmed.starts_with("## ") && !trimmed.eq_ignore_ascii_case("## Requirements") {
+            if in_requirements
+                && trimmed.starts_with("## ")
+                && !trimmed.eq_ignore_ascii_case("## Requirements")
+            {
                 if let Some(req) = current_req.take() {
                     requirements.push(req);
                 }
@@ -207,8 +210,8 @@ mod common {
 
     /// Show spec from file path.
     pub fn show_spec(path: &Path) -> Result<String, String> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read spec file: {}", e))?;
+        let content =
+            fs::read_to_string(path).map_err(|e| format!("Failed to read spec file: {}", e))?;
         let spec = parse_spec_content(&content)?;
         Ok(format_spec(&spec))
     }
@@ -412,7 +415,11 @@ fn test_parse_actual_spec_file() {
 
     if cli_spec_path.exists() {
         let result = common::show_spec(cli_spec_path);
-        assert!(result.is_ok(), "Failed to parse cli spec: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Failed to parse cli spec: {:?}",
+            result.err()
+        );
 
         let output = result.unwrap();
         assert!(output.contains("Spec: cli"));

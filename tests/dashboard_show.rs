@@ -124,8 +124,8 @@ Testing dashboard.
 fn run_dashboard(root: &PathBuf) -> Result<String, String> {
     // Load config from the temp directory
     let config_path = root.join("spox.toml");
-    let config_content = fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read config: {}", e))?;
+    let config_content =
+        fs::read_to_string(&config_path).map_err(|e| format!("Failed to read config: {}", e))?;
 
     // Parse the TOML manually (simple extraction for test)
     let spec_folder = extract_toml_value(&config_content, "spec_folder")

@@ -8,10 +8,7 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Helper to create a temp change directory with proposal and optional delta specs.
-fn create_temp_change(
-    proposal_content: &str,
-    delta_specs: &[(&str, &str)],
-) -> (TempDir, PathBuf) {
+fn create_temp_change(proposal_content: &str, delta_specs: &[(&str, &str)]) -> (TempDir, PathBuf) {
     let temp_dir = TempDir::new().unwrap();
     let change_dir = temp_dir.path().to_path_buf();
 
@@ -123,10 +120,8 @@ The requirement has been renamed for consistency with other specifications.
 #[test]
 fn test_valid_change_directory_structure() {
     // Test that a well-formed change directory has the expected structure
-    let (_temp_dir, change_dir) = create_temp_change(
-        VALID_PROPOSAL,
-        &[("auth", VALID_DELTA_SPEC_ADDED)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(VALID_PROPOSAL, &[("auth", VALID_DELTA_SPEC_ADDED)]);
 
     // Verify proposal.md was created
     let proposal_path = change_dir.join("proposal.md");
@@ -196,10 +191,8 @@ fn test_proposal_missing_why_section_structure() {
 - Add new feature
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        proposal_missing_why,
-        &[("feature", VALID_DELTA_SPEC_ADDED)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(proposal_missing_why, &[("feature", VALID_DELTA_SPEC_ADDED)]);
 
     let proposal_content = fs::read_to_string(change_dir.join("proposal.md")).unwrap();
     assert!(!proposal_content.contains("## Why"));
@@ -260,10 +253,8 @@ This feature is being removed.
 The requirement has been renamed.
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        VALID_PROPOSAL,
-        &[("comprehensive", all_ops_spec)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(VALID_PROPOSAL, &[("comprehensive", all_ops_spec)]);
 
     let delta_content = fs::read_to_string(change_dir.join("specs/comprehensive/spec.md")).unwrap();
     assert!(delta_content.contains("## ADDED Requirements"));
@@ -274,10 +265,8 @@ The requirement has been renamed.
 
 #[test]
 fn test_delta_spec_scenario_with_when_then() {
-    let (_temp_dir, change_dir) = create_temp_change(
-        VALID_PROPOSAL,
-        &[("auth", VALID_DELTA_SPEC_ADDED)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(VALID_PROPOSAL, &[("auth", VALID_DELTA_SPEC_ADDED)]);
 
     let delta_content = fs::read_to_string(change_dir.join("specs/auth/spec.md")).unwrap();
 
@@ -297,10 +286,8 @@ fn test_delta_spec_without_scenarios() {
 The system SHALL support the simple feature without scenarios.
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        VALID_PROPOSAL,
-        &[("simple", no_scenarios_spec)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(VALID_PROPOSAL, &[("simple", no_scenarios_spec)]);
 
     let delta_content = fs::read_to_string(change_dir.join("specs/simple/spec.md")).unwrap();
 
@@ -320,10 +307,8 @@ fn test_delta_spec_with_invalid_headers() {
 This is not a valid delta header.
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        VALID_PROPOSAL,
-        &[("invalid", invalid_headers_spec)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(VALID_PROPOSAL, &[("invalid", invalid_headers_spec)]);
 
     let delta_content = fs::read_to_string(change_dir.join("specs/invalid/spec.md")).unwrap();
 
@@ -345,17 +330,18 @@ Short.
 - Add feature
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        short_why_proposal,
-        &[("feature", VALID_DELTA_SPEC_ADDED)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(short_why_proposal, &[("feature", VALID_DELTA_SPEC_ADDED)]);
 
     let proposal_content = fs::read_to_string(change_dir.join("proposal.md")).unwrap();
 
     // Extract Why section content
     let lines: Vec<&str> = proposal_content.lines().collect();
     let why_idx = lines.iter().position(|l| l.contains("## Why")).unwrap();
-    let what_idx = lines.iter().position(|l| l.contains("## What Changes")).unwrap();
+    let what_idx = lines
+        .iter()
+        .position(|l| l.contains("## What Changes"))
+        .unwrap();
 
     let why_text: String = lines[why_idx + 1..what_idx]
         .iter()
@@ -365,7 +351,11 @@ Short.
         .join(" ");
 
     // Verify Why section is short (less than 50 chars)
-    assert!(why_text.len() < 50, "Why text length: {} should be < 50", why_text.len());
+    assert!(
+        why_text.len() < 50,
+        "Why text length: {} should be < 50",
+        why_text.len()
+    );
 }
 
 #[test]
@@ -373,10 +363,8 @@ fn test_temp_directory_cleanup() {
     // Test that temp directories are properly cleaned up
     let change_dir_path: PathBuf;
     {
-        let (temp_dir, change_dir) = create_temp_change(
-            VALID_PROPOSAL,
-            &[("auth", VALID_DELTA_SPEC_ADDED)],
-        );
+        let (temp_dir, change_dir) =
+            create_temp_change(VALID_PROPOSAL, &[("auth", VALID_DELTA_SPEC_ADDED)]);
         change_dir_path = change_dir.clone();
         assert!(change_dir_path.exists());
         drop(temp_dir); // Explicitly drop to trigger cleanup
@@ -424,10 +412,7 @@ The system SHALL support the third feature.
 - **THEN** result B
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        VALID_PROPOSAL,
-        &[("multi", multi_req_spec)],
-    );
+    let (_temp_dir, change_dir) = create_temp_change(VALID_PROPOSAL, &[("multi", multi_req_spec)]);
 
     let delta_content = fs::read_to_string(change_dir.join("specs/multi/spec.md")).unwrap();
 
@@ -454,10 +439,8 @@ and improve the overall system functionality and user experience.
 - Add feature
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        uppercase_proposal,
-        &[("feature", VALID_DELTA_SPEC_ADDED)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(uppercase_proposal, &[("feature", VALID_DELTA_SPEC_ADDED)]);
 
     let proposal_content = fs::read_to_string(change_dir.join("proposal.md")).unwrap();
     assert!(proposal_content.contains("## WHY"));
@@ -480,10 +463,8 @@ The system SHALL support the feature.
 - **THEN** pass
 "#;
 
-    let (_temp_dir, change_dir) = create_temp_change(
-        VALID_PROPOSAL,
-        &[("feature", uppercase_delta)],
-    );
+    let (_temp_dir, change_dir) =
+        create_temp_change(VALID_PROPOSAL, &[("feature", uppercase_delta)]);
 
     let delta_content = fs::read_to_string(change_dir.join("specs/feature/spec.md")).unwrap();
     assert!(delta_content.contains("## ADDED REQUIREMENTS"));

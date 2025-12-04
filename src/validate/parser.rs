@@ -31,8 +31,7 @@ pub fn find_section(content: &str, header: &str) -> Option<(usize, String)> {
             for subsequent_line in lines.iter().skip(idx + 1) {
                 let subsequent_trimmed = subsequent_line.trim();
                 // Stop at next ## header (but not ### or deeper)
-                if subsequent_trimmed.starts_with("## ")
-                    && !subsequent_trimmed.starts_with("### ")
+                if subsequent_trimmed.starts_with("## ") && !subsequent_trimmed.starts_with("### ")
                 {
                     break;
                 }

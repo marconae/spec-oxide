@@ -94,11 +94,7 @@ pub fn progress_bar(completed: usize, total: usize) -> String {
         0
     };
     let empty = width - filled;
-    format!(
-        "{}{}",
-        "\u{2588}".repeat(filled),
-        "\u{2591}".repeat(empty)
-    )
+    format!("{}{}", "\u{2588}".repeat(filled), "\u{2591}".repeat(empty))
 }
 
 /// Create a colored progress bar visualization.
