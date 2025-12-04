@@ -3,6 +3,7 @@
 use crate::error::{Error, Result};
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 // Embedded template files for single-binary distribution
 
@@ -16,6 +17,7 @@ const TEMPLATE_STANDARDS_FRONTEND_MD: &str =
 const TEMPLATE_STANDARDS_GLOBAL_MD: &str = include_str!("../templates/spox/standards/global.md");
 const TEMPLATE_STANDARDS_TESTING_MD: &str = include_str!("../templates/spox/standards/testing.md");
 const TEMPLATE_STANDARDS_VCS_MD: &str = include_str!("../templates/spox/standards/vcs.md");
+const TEMPLATE_SETUP_SH: &str = include_str!("../templates/spox/setup.sh");
 
 // .spox/specs/ templates
 const TEMPLATE_SPEC_SPEC_MD: &str = include_str!("../templates/specs/spec.md");
@@ -57,6 +59,7 @@ const TEMPLATE_CLAUDE_MD: &str = include_str!("../templates/spox/CLAUDE-template
 /// |-- .spox/
 /// |   |-- config.toml
 /// |   |-- workflow.md
+/// |   |-- setup.sh
 /// |   |-- standards/
 /// |   |   |-- backend.md
 /// |   |   |-- coding.md
@@ -172,6 +175,11 @@ fn create_spox_dir(base_path: &Path) -> Result<()> {
         TEMPLATE_SPEC_CHANGE_VERIFICATION_MD,
     )?;
 
+    // Write setup.sh and make it executable (always overwrite - tooling file)
+    let setup_sh_path = spox_dir.join("setup.sh");
+    write_file(&setup_sh_path, TEMPLATE_SETUP_SH)?;
+    make_executable(&setup_sh_path)?;
+
     Ok(())
 }
 
@@ -260,6 +268,35 @@ fn write_file_if_not_exists(path: &Path, content: &str) -> Result<()> {
     Ok(())
 }
 
+/// Make a file executable on Unix systems (chmod +x equivalent).
+#[cfg(unix)]
+fn make_executable(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let permissions = fs::Permissions::from_mode(0o755);
+    fs::set_permissions(path, permissions).map_err(|e| {
+        Error::Init(format!(
+            "failed to set executable permissions on '{}': {}",
+            path.display(),
+            e
+        ))
+    })
+}
+
+/// No-op on non-Unix systems.
+#[cfg(not(unix))]
+fn make_executable(_path: &Path) -> Result<()> {
+    Ok(())
+}
+
+/// Check if Claude Code CLI is available on the system.
+fn is_claude_code_available() -> bool {
+    Command::new("sh")
+        .args(["-c", "command -v claude"])
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false)
+}
+
 const SPOX_START_MARKER: &str = "<!-- SPOX:START -->";
 const SPOX_END_MARKER: &str = "<!-- SPOX:END -->";
 
@@ -339,7 +376,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("Updated Spox tooling in {}", path_display);
         println!();
         println!("Updated tooling files:");
-        println!("  .spox/           (config, workflow, standards, spec templates)");
+        println!("  .spox/           (config, workflow, standards, spec templates, setup.sh)");
         println!("  .claude/         (agents, commands)");
         println!("  CLAUDE.md        (SPOX block)");
         println!();
@@ -354,6 +391,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("  .spox/");
         println!("    config.toml");
         println!("    workflow.md");
+        println!("    setup.sh");
         println!("    standards/");
         println!("      backend.md");
         println!("      coding.md");
@@ -385,6 +423,35 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("    _archive/");
         println!("  CLAUDE.md");
     }
+
+    // Print environment setup instructions
+    print_environment_setup_instructions();
+}
+
+/// Print instructions for setting up the Claude Code environment.
+fn print_environment_setup_instructions() {
+    println!();
+    println!("Environment Setup:");
+    println!("------------------");
+
+    if is_claude_code_available() {
+        println!("Claude Code detected. Run the setup script to configure MCP:");
+        println!();
+        println!("  .spox/setup.sh");
+    } else {
+        println!("Claude Code not detected. Install it first:");
+        println!();
+        println!("  npm install -g @anthropic-ai/claude-code");
+        println!("  # or");
+        println!("  curl -fsSL https://claude.ai/install.sh | bash");
+        println!();
+        println!("Then run the setup script to configure MCP:");
+        println!();
+        println!("  .spox/setup.sh");
+    }
+
+    println!();
+    println!("Note: Windows users require WSL to run the setup script.");
 }
 
 #[cfg(test)]
@@ -618,5 +685,55 @@ mod tests {
         // Only one SPOX block should exist
         assert_eq!(result.matches(SPOX_START_MARKER).count(), 1);
         assert_eq!(result.matches(SPOX_END_MARKER).count(), 1);
+    }
+
+    #[test]
+    fn test_init_creates_setup_sh() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+        let setup_sh = temp.path().join(".spox/setup.sh");
+        assert!(setup_sh.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_setup_sh_is_executable() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+        let setup_sh = temp.path().join(".spox/setup.sh");
+
+        let metadata = fs::metadata(&setup_sh).unwrap();
+        let permissions = metadata.permissions();
+        let mode = permissions.mode();
+
+        // Check that executable bits are set (at least user execute)
+        assert!(mode & 0o100 != 0, "setup.sh should be executable");
+    }
+
+    #[test]
+    fn test_init_updates_setup_sh_on_reinit() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        // Modify setup.sh with old content
+        let setup_sh = temp.path().join(".spox/setup.sh");
+        fs::write(&setup_sh, "old content").unwrap();
+
+        // Re-run init
+        run(temp.path()).unwrap();
+
+        // setup.sh should be updated (not "old content")
+        let content = fs::read_to_string(&setup_sh).unwrap();
+        assert_ne!(content, "old content");
+    }
+
+    #[test]
+    fn test_is_claude_code_available_returns_bool() {
+        // This test just verifies the function runs without panicking
+        // and returns a boolean. The actual result depends on the system.
+        let result = is_claude_code_available();
+        assert!(result == true || result == false);
     }
 }
