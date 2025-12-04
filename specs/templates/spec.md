@@ -24,17 +24,17 @@ Agent templates SHALL follow a consistent structure optimized for Claude Code co
 - **AND** rules SHALL be formatted as numbered items or tables
 - **AND** prose SHALL be minimal, favoring structured formats
 
-#### Scenario: Explicit file paths
+#### Scenario: Claude Code file references in agents and commands
 
-- **WHEN** an agent references project files
-- **THEN** paths SHALL use explicit relative paths (e.g., `.spox/workflow.md`)
-- **AND** paths SHALL NOT use `@` syntax in the agent body
+- **WHEN** an agent or command references project files for Claude Code to load
+- **THEN** paths SHALL use `@` syntax without backticks (e.g., `@.spox/workflow.md`)
+- **AND** this enables Claude Code to automatically load the referenced files when the template is executed
 
 #### Scenario: Standards compliance section
 
 - **WHEN** an agent template is complete
 - **THEN** it SHALL include a "Standards Compliance" section
-- **AND** the section SHALL reference `.spox/workflow.md`, `.spox/standards/`, and `specs/mission.md`
+- **AND** the section SHALL reference `@.spox/workflow.md`, `@.spox/standards/`, and `@specs/mission.md` using `@` syntax
 
 ### Requirement: Workflow Template Content
 
@@ -74,22 +74,22 @@ The workflow template SHALL use the `spox` CLI with the correct resource-verb co
 
 ### Requirement: Agent Template Content
 
-The agent templates SHALL reference the correct Spox directory structure for project context and standards.
+The agent templates SHALL reference the correct Spox directory structure for project context and standards using `@` syntax.
 
 #### Scenario: Project context references
 
 - **WHEN** an agent template references project context
-- **THEN** it uses `specs/mission.md`
+- **THEN** it uses `@specs/mission.md` with `@` syntax for Claude Code auto-loading
 
 #### Scenario: Standards references
 
 - **WHEN** an agent template references coding standards
-- **THEN** it uses `.spox/standards/`
+- **THEN** it uses `@.spox/standards/` paths with `@` syntax for Claude Code auto-loading
 
 #### Scenario: Workflow references
 
 - **WHEN** an agent template references workflow documentation
-- **THEN** it uses `.spox/workflow.md`
+- **THEN** it uses `@.spox/workflow.md` with `@` syntax for Claude Code auto-loading
 
 ### Requirement: Command Template Content
 
@@ -121,4 +121,22 @@ The slash command templates SHALL use the `spox` CLI with the correct resource-v
 - **AND** it uses `spox spec show <id>` only when specific spec details are needed
 - **AND** it uses `spox change show <id>` only when specific change details are needed
 - **AND** it does NOT use `spox show` (dashboard is for humans only)
+
+### Requirement: CLAUDE Template Convention
+
+The CLAUDE-template.md SHALL use backtick-escaped `@` references to prevent Claude Code from auto-loading files when viewing the template source.
+
+#### Scenario: Backtick-escaped references in CLAUDE-template.md
+
+- **WHEN** the CLAUDE-template.md references project files
+- **THEN** paths SHALL use backtick syntax (e.g., `` `@.spox/workflow.md` ``)
+- **AND** this prevents Claude Code from auto-loading files when the template file itself is viewed
+- **AND** when copied to CLAUDE.md in user projects, the backticks remain intentionally
+
+#### Scenario: Distinction from agent/command templates
+
+- **WHEN** comparing CLAUDE-template.md to agent and command templates
+- **THEN** CLAUDE-template.md uses backtick-escaped `@` paths (prevents auto-load)
+- **AND** agent and command templates use unescaped `@` paths (enables auto-load)
+- **AND** this distinction is intentional for different use cases
 
