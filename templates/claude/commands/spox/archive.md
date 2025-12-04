@@ -5,6 +5,20 @@ category: Spec Oxide
 tags: [ spox, archive ]
 ---
 
+## Standards Compliance
+
+Read and **ensure** your work aligns with the following standards, conventions, rules and workflows:
+
+- @.spox/standards/mcp.md — MCP tool preferences
+- @.spox/standards/global.md — Cross-cutting standards
+- @.spox/standards/coding.md — General coding conventions
+- @.spox/standards/testing.md — TDD rules and verification
+- @.spox/standards/backend.md — API, database, and query standards
+- @.spox/standards/frontend.md — UI components, CSS, responsive design
+- @.spox/standards/vcs.md — Version control standards
+- @.spox/workflow.md — Spex Oxide (SpOx) workflow
+- @specs/mission.md — Project mission, goals and high-level architecture
+
 ## Goal
 
 **Merge completed changes into the source of truth.**
@@ -15,12 +29,13 @@ change folder moves to the archive. This completes the propose → implement →
 The user provides change IDs to archive, either directly in the prompt or when asked. Only archive changes that have
 been implemented (if the user does not overrule).
 
+$ARGUMENTS
+
 ## Guardrails
 
 - **Implemented changes only.** Do not archive changes that haven't been implemented.
 - **Verify before archiving.** Confirm the change is complete and valid.
 - **Apply deltas carefully.** The archived deltas become the new source of truth.
-- **Check conventions.** Read `.spox/workflow.md` if you need guidance.
 
 ## Steps
 

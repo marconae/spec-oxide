@@ -5,6 +5,20 @@ category: Spec Oxide
 tags: [ spox, change, proposal ]
 ---
 
+## Standards Compliance
+
+Read and **ensure** your work aligns with the following standards, conventions, rules and workflows:
+
+- @.spox/standards/mcp.md — MCP tool preferences
+- @.spox/standards/global.md — Cross-cutting standards
+- @.spox/standards/coding.md — General coding conventions
+- @.spox/standards/testing.md — TDD rules and verification
+- @.spox/standards/backend.md — API, database, and query standards
+- @.spox/standards/frontend.md — UI components, CSS, responsive design
+- @.spox/standards/vcs.md — Version control standards
+- @.spox/workflow.md — Spex Oxide (SpOx) workflow
+- @specs/mission.md — Project mission, goals and high-level architecture
+
 ## Goal
 
 **Agree on what to build before writing any code.**
@@ -12,16 +26,16 @@ tags: [ spox, change, proposal ]
 You are creating a proposal—a contract between human and AI that defines exactly what will change. No implementation
 happens until this proposal is approved. This prevents wasted effort and ensures alignment.
 
-The user provides input via conversation prompts or by sharing a markdown file containing a rough idea. Your job is to
+The user provides input via conversation prompts or by sharing a Markdown file containing a rough idea. Your job is to
 transform that input into a structured, validated proposal.
+
+$ARGUMENTS
 
 ## Guardrails
 
 - **No code.** Only create documentation: `proposal.md`, `tasks.md`, `design.md`, and spec deltas.
 - **Minimal scope.** Keep the proposal tightly focused on the requested outcome.
 - **Clarify first.** If anything is vague or ambiguous, ask questions before creating files.
-- **Check project mission.** Ensure proposal aligns with `specs/mission.md`.
-- **Check conventions.** Run `ls .spox` and read `.spox/workflow.md` if you need guidance.
 
 ## Steps
 
@@ -34,8 +48,6 @@ spox config show      # Get authoritative paths
 spox spec list        # See existing capabilities
 spox change list      # Check for in-progress changes that might conflict
 ```
-
-Read `specs/mission.md` for the project mission.
 
 ### 2. Choose a Change ID
 
@@ -109,7 +121,8 @@ Create `tasks.md` with ordered, verifiable work items:
 - [ ] 2.2 Integration tests for login flow
 ```
 
-Mark dependencies and parallelizable work where relevant.
+Mark dependencies and parallelizable work where relevant. 
+Callout important notes and hints in the "## Notes" section.
 
 ### 6. Validate
 
