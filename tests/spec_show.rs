@@ -180,7 +180,7 @@ mod common {
         output.push_str(&format!("+{}+\n", "-".repeat(59)));
         output.push_str(&format!("| Spec: {:<51} |\n", spec.name));
         output.push_str(&format!("+{}+\n", "-".repeat(59)));
-        output.push_str("\n");
+        output.push('\n');
 
         // Purpose
         output.push_str("Purpose:\n");
