@@ -1,11 +1,11 @@
 ## Version Control Discipline
 
-### The Law
+### Git Guardrails
 
-**You may READ git state, but you must NEVER WRITE to git.**
-Writing to Git is fully controlled by the user.
+- **You may READ git state, but you must NEVER WRITE to git.**
+- Writing to Git is fully controlled by the user.
 
-### Commands
+#### Commands
 
 **Allowed Commands** Use the following only to inspect changes, branch, commits, conflicts, and overall repo state:
 ```bash
@@ -44,7 +44,7 @@ git remote add/remove   # Remote management
 git submodule           # Submodule operations
 ```
 
-### Verify status before completing work
+#### Verify status before completing work
 
 **Mandatory** Check git status before marking work complete:
 
@@ -53,7 +53,7 @@ git status              # Verify expected files changed
 git diff                # Review actual changes
 ```
 
-## Commit Conventions
+### Commit Conventions
 
 The commit message SHALL be structured like this:
 
