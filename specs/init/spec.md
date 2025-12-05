@@ -14,9 +14,11 @@ The `spox init` command SHALL bootstrap a new Spec Oxide project or update an ex
 #### Scenario: Initialize in current directory
 
 - **WHEN** user runs `spox init` in an empty directory
-- **THEN** the command creates `.spox/` directory with config.toml, workflow.md, standards/, setup.sh, and custom/
+- **THEN** the command creates `.spox/` directory with config.toml, setup.sh, and custom/
+- **AND** creates `.spox/.gitignore` with rules to exclude spox-managed files
 - **AND** creates `.claude/agents/` with spox-prefixed agent templates
 - **AND** creates `.claude/commands/spox/` with command templates
+- **AND** creates `.claude/.gitignore` with rules to exclude spox-managed files
 - **AND** creates `specs/` directory with mission.md
 - **AND** creates `specs/_changes/` directory
 - **AND** creates `specs/_archive/` directory
@@ -32,7 +34,9 @@ The `spox init` command SHALL bootstrap a new Spec Oxide project or update an ex
 #### Scenario: Update existing project
 
 - **WHEN** user runs `spox init` in a directory that already has `.spox/`
-- **THEN** the command updates agents, commands, standards, and setup.sh to latest templates
+- **THEN** the command updates agents, commands, and setup.sh to latest templates
+- **AND** appends missing rules to `.spox/.gitignore` without duplicating existing rules
+- **AND** appends missing rules to `.claude/.gitignore` without duplicating existing rules
 - **AND** preserves existing `specs/mission.md`
 - **AND** preserves existing `.spox/custom/` directory and contents
 - **AND** does not modify any files in `specs/`, `specs/_changes/`, or `specs/_archive/`
@@ -68,19 +72,7 @@ The `spox init` command SHALL migrate existing configurations to the new format 
 
 ### Requirement: Template File Copying
 
-The `spox init` command SHALL copy all template files from bundled templates to the project directory, always updating tooling files.
-
-#### Scenario: Standards templates copied
-
-- **WHEN** initialization or update completes successfully
-- **THEN** all files from `templates/spox/standards/` exist in `.spox/standards/`
-- **AND** file contents match the embedded templates (overwriting existing)
-- **AND** includes `mcp.md`, `global.md`, `coding.md`, `testing.md`, `backend.md`, `frontend.md`, `vcs.md`
-
-#### Scenario: Workflow template copied
-
-- **WHEN** initialization or update completes successfully
-- **THEN** `.spox/workflow.md` exists with content from `templates/spox/workflow.md`
+The `spox init` command SHALL copy Claude Code agent and command templates from bundled templates to the project directory, always updating tooling files. Spec and standards templates are bundled in the binary and NOT copied to the filesystem.
 
 #### Scenario: Claude Code agents copied
 
@@ -106,18 +98,15 @@ The `spox init` command SHALL copy all template files from bundled templates to 
 - **WHEN** update runs on existing project with `specs/mission.md`
 - **THEN** existing `specs/mission.md` is not modified
 
-#### Scenario: Spec templates copied to .spox
+#### Scenario: Spec templates copied to .spox/templates
 
 - **WHEN** initialization or update completes successfully
-- **THEN** `.spox/specs/` directory exists
-- **AND** `.spox/specs/spec.md` exists with content from `templates/specs/spec.md`
-- **AND** `.spox/specs/mission.md` exists with content from `templates/specs/mission.md`
-- **AND** `.spox/specs/change/` directory exists with all change templates:
-    - `.spox/specs/change/proposal.md`
-    - `.spox/specs/change/tasks.md`
-    - `.spox/specs/change/design.md`
-    - `.spox/specs/change/spec.md`
-    - `.spox/specs/change/verification.md`
+- **THEN** `.spox/templates/` directory exists with spec and change templates
+- **AND** `.spox/templates/spec.md` contains the spec template
+- **AND** `.spox/templates/change/` contains change templates (proposal.md, tasks.md, design.md, spec.md, verification.md)
+- **AND** `.spox/specs/` directory does NOT exist (renamed to templates)
+- **AND** `.spox/standards/` directory does NOT exist
+- **AND** `.spox/workflow.md` does NOT exist
 
 ### Requirement: Environment Setup Script
 
@@ -235,3 +224,73 @@ The `spox init` command SHALL create or update the project's `.claude/CLAUDE.md`
 - **WHEN** `spox init` runs and `[rules].custom` is empty or not specified
 - **THEN** the `<!-- SPOX:USER-TEMPLATES -->` marker and surrounding whitespace are removed
 - **AND** no empty section remains in the generated CLAUDE.md
+
+### Requirement: Gitignore Management
+
+The `spox init` command SHALL create or update .gitignore files in `.spox/` and `.claude/` directories to exclude spox-managed files from version control.
+
+#### Scenario: Create .spox/.gitignore on fresh init
+
+- **WHEN** `spox init` runs and `.spox/.gitignore` does not exist
+- **THEN** `.spox/.gitignore` is created from `templates/spox/gitignore` template
+- **AND** the template contains rules excluding spox-generated files:
+  - `/templates/` (spec and change templates)
+  - `/standards/` (if it existed from older versions)
+  - `/specs/` (if it existed from older versions)
+  - `workflow.md` (if it existed from older versions)
+  - `setup.sh`
+
+#### Scenario: Append to existing .spox/.gitignore
+
+- **WHEN** `spox init` runs and `.spox/.gitignore` already exists
+- **THEN** missing rules are appended to the file
+- **AND** existing rules are not duplicated
+- **AND** existing custom rules added by user are preserved
+
+#### Scenario: Create .claude/.gitignore on fresh init
+
+- **WHEN** `spox init` runs and `.claude/.gitignore` does not exist
+- **THEN** `.claude/.gitignore` is created from `templates/claude/gitignore` template
+- **AND** the template contains rules excluding spox-managed files:
+  - `agents/spox-*.md`
+  - `commands/spox/`
+
+#### Scenario: Append to existing .claude/.gitignore
+
+- **WHEN** `spox init` runs and `.claude/.gitignore` already exists
+- **THEN** missing rules are appended to the file
+- **AND** existing rules are not duplicated
+- **AND** existing custom rules added by user are preserved
+
+### Requirement: CLAUDE.md Mission Reference
+
+The generated CLAUDE.md SHALL reference the project mission via `@specs/mission.md` instead of embedding mission content directly.
+
+#### Scenario: Mission referenced not embedded
+
+- **WHEN** `spox init` generates `.claude/CLAUDE.md`
+- **THEN** the file contains `@specs/mission.md` reference
+- **AND** the file does NOT contain embedded mission content
+
+### Requirement: CLAUDE.md Format Validation
+
+The generated CLAUDE.md SHALL be valid markdown with correct heading hierarchy and formatting.
+
+#### Scenario: Valid heading hierarchy
+
+- **WHEN** CLAUDE.md is generated
+- **THEN** headings follow proper hierarchy (h1 -> h2 -> h3, no skipping levels)
+- **AND** no h2 follows directly after h1 without content (unless intentional section grouping)
+
+#### Scenario: Valid markdown tables
+
+- **WHEN** CLAUDE.md contains tables
+- **THEN** all tables have consistent column counts
+- **AND** all tables have proper separator rows (---|---)
+- **AND** header rows match data row column counts
+
+#### Scenario: Valid code fences
+
+- **WHEN** CLAUDE.md contains code blocks
+- **THEN** all code fences have matching opening and closing markers
+- **AND** code fence language hints are valid (no malformed hints)
