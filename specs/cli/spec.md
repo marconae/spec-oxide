@@ -111,6 +111,13 @@ The CLI SHALL accept the resource-verb pattern for operations.
 - **THEN** display only delta requirements
 - **AND** exit with code 0
 
+#### Scenario: Init validates rules configuration
+
+- **WHEN** `spox init` is executed
+- **THEN** validate that `[rules].system` is non-empty if present
+- **AND** validate that all referenced system templates exist
+- **AND** report clear error messages for invalid configuration
+
 ### Requirement: Spec List Command
 
 The CLI SHALL list all specs with their requirement counts when `spox spec list` is executed.

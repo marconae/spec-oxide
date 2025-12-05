@@ -14,7 +14,7 @@ The `spox init` command SHALL bootstrap a new Spec Oxide project or update an ex
 #### Scenario: Initialize in current directory
 
 - **WHEN** user runs `spox init` in an empty directory
-- **THEN** the command creates `.spox/` directory with config.toml, workflow.md, standards/, and setup.sh
+- **THEN** the command creates `.spox/` directory with config.toml, workflow.md, standards/, setup.sh, and custom/
 - **AND** creates `.claude/agents/` with spox-prefixed agent templates
 - **AND** creates `.claude/commands/spox/` with command templates
 - **AND** creates `specs/` directory with mission.md
@@ -34,9 +34,37 @@ The `spox init` command SHALL bootstrap a new Spec Oxide project or update an ex
 - **WHEN** user runs `spox init` in a directory that already has `.spox/`
 - **THEN** the command updates agents, commands, standards, and setup.sh to latest templates
 - **AND** preserves existing `specs/mission.md`
+- **AND** preserves existing `.spox/custom/` directory and contents
 - **AND** does not modify any files in `specs/`, `specs/_changes/`, or `specs/_archive/`
 - **AND** exits with code 0
 - **AND** prints update success message with environment setup hints
+
+### Requirement: Custom Rules Directory
+
+The `spox init` command SHALL create and preserve the `.spox/custom/` directory for user-defined rule files.
+
+#### Scenario: Custom directory created on fresh init
+
+- **WHEN** `spox init` runs on a fresh project
+- **THEN** `.spox/custom/` directory is created
+- **AND** the directory is empty
+
+#### Scenario: Custom directory preserved on update
+
+- **WHEN** `spox init` runs on an existing project with `.spox/custom/`
+- **THEN** the directory and its contents are preserved
+- **AND** no files in `.spox/custom/` are modified or deleted
+
+### Requirement: Configuration Migration
+
+The `spox init` command SHALL migrate existing configurations to the new format with `[rules]` section.
+
+#### Scenario: Missing rules section added on update
+
+- **WHEN** `spox init` runs on existing project without `[rules]` in config.toml
+- **THEN** the `[rules]` section is added to config.toml
+- **AND** `system` array contains all available templates by default
+- **AND** existing configuration values are preserved
 
 ### Requirement: Template File Copying
 
@@ -47,6 +75,7 @@ The `spox init` command SHALL copy all template files from bundled templates to 
 - **WHEN** initialization or update completes successfully
 - **THEN** all files from `templates/spox/standards/` exist in `.spox/standards/`
 - **AND** file contents match the embedded templates (overwriting existing)
+- **AND** includes `mcp.md`, `global.md`, `coding.md`, `testing.md`, `backend.md`, `frontend.md`, `vcs.md`
 
 #### Scenario: Workflow template copied
 
@@ -63,8 +92,8 @@ The `spox init` command SHALL copy all template files from bundled templates to 
 #### Scenario: Claude Code commands copied
 
 - **WHEN** initialization or update completes successfully
-- **THEN** all files from `templates/claude/commands/spox/` exist in `.claude/commands/spox/`
-- **AND** command files use correct names (`propose.md`, `implement.md`, `archive.md`)
+- **THEN** all command templates exist in `.claude/commands/spox/`
+- **AND** command files include `propose.md`, `implement.md`, `archive.md`, and `vibe.md`
 - **AND** existing spox command files are overwritten with latest templates
 
 #### Scenario: Mission template copied only on fresh init
@@ -172,21 +201,37 @@ The `spox init` command SHALL create spec directories based on the default confi
 
 ### Requirement: CLAUDE.md Template Handling
 
-The `spox init` command SHALL create or update the project's CLAUDE.md file with Spec Oxide instructions.
+The `spox init` command SHALL create or update the project's `.claude/CLAUDE.md` file by processing the CLAUDE-template.md and replacing section markers with merged content.
 
 #### Scenario: Fresh project without CLAUDE.md
 
-- **WHEN** `spox init` runs in a directory without CLAUDE.md
-- **THEN** CLAUDE.md is created from the bundled template
+- **WHEN** `spox init` runs in a directory without `.claude/CLAUDE.md`
+- **THEN** `.claude/CLAUDE.md` is created from CLAUDE-template.md
+- **AND** `<!-- SPOX:SYSTEM-TEMPLATES -->` is replaced with concatenated system template contents
+- **AND** `<!-- SPOX:USER-TEMPLATES -->` is replaced with concatenated custom rule contents, or removed if no custom rules
+- **AND** `<!-- SPOX:WORKFLOW -->` is replaced with workflow.md contents
 
 #### Scenario: Existing CLAUDE.md without SPOX markers
 
-- **WHEN** `spox init` runs in a directory with CLAUDE.md that lacks SPOX markers
-- **THEN** the SPOX block is appended to the end of the existing file
+- **WHEN** `spox init` runs in a directory with `.claude/CLAUDE.md` that lacks SPOX markers
+- **THEN** the processed SPOX block is appended to the end of the existing file
 - **AND** existing content is preserved
 
 #### Scenario: Existing CLAUDE.md with SPOX markers
 
-- **WHEN** `spox init` runs in a directory with CLAUDE.md containing `<!-- SPOX:START -->` and `<!-- SPOX:END -->` markers
-- **THEN** the content between markers is replaced with the bundled template block
+- **WHEN** `spox init` runs in a directory with `.claude/CLAUDE.md` containing `<!-- SPOX:START -->` and `<!-- SPOX:END -->` markers
+- **THEN** the content between markers is replaced with newly processed template
 - **AND** content outside the markers is preserved
+- **AND** section markers are replaced based on current config.toml rules settings
+
+#### Scenario: System templates merged in config order
+
+- **WHEN** `spox init` processes system templates
+- **THEN** templates are concatenated in the order specified in `[rules].system` array
+- **AND** each template content is included without modification
+
+#### Scenario: User templates section removed when empty
+
+- **WHEN** `spox init` runs and `[rules].custom` is empty or not specified
+- **THEN** the `<!-- SPOX:USER-TEMPLATES -->` marker and surrounding whitespace are removed
+- **AND** no empty section remains in the generated CLAUDE.md
