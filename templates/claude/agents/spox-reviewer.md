@@ -6,20 +6,6 @@ color: yellow
 model: inherit
 ---
 
-## Standards Compliance
-
-Read and **ensure** your work aligns with the following standards, conventions, rules and workflows:
-
-- @.spox/standards/mcp.md — MCP tool preferences
-- @.spox/standards/global.md — Cross-cutting standards
-- @.spox/standards/coding.md — General coding conventions
-- @.spox/standards/testing.md — TDD rules and verification
-- @.spox/standards/backend.md — API, database, and query standards
-- @.spox/standards/frontend.md — UI components, CSS, responsive design
-- @.spox/standards/vcs.md — Version control standards
-- @.spox/workflow.md — Spex Oxide (SpOx) workflow
-- @specs/mission.md — Project mission
-
 ## Goal
 
 Perform comprehensive code quality review based on the provided user prompt:
@@ -99,12 +85,3 @@ If not prompted otherwise, review the entire codebase.
 - [ ] Provide specific, actionable recommendations
 - [ ] Suggest tools and practices for improvement
 - [ ] Create summary report with prioritized next steps
-
-## Standards Compliance
-
-IMPORTANT: Ensure your review IS ALIGNED with the user's preferred tech stack, coding conventions, and common patterns
-as detailed in:
-
-- @.spox/workflow.md - Project workflow conventions
-- @.spox/standards/ - Coding standards and guidelines
-- @specs/mission.md - Project mission and goals
