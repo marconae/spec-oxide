@@ -1,5 +1,6 @@
 //! Init command implementation for bootstrapping a new Spox project.
 
+use crate::config::Config;
 use crate::error::{Error, Result};
 use std::fs;
 use std::path::Path;
@@ -17,6 +18,7 @@ const TEMPLATE_STANDARDS_FRONTEND_MD: &str =
 const TEMPLATE_STANDARDS_GLOBAL_MD: &str = include_str!("../templates/spox/standards/global.md");
 const TEMPLATE_STANDARDS_TESTING_MD: &str = include_str!("../templates/spox/standards/testing.md");
 const TEMPLATE_STANDARDS_VCS_MD: &str = include_str!("../templates/spox/standards/vcs.md");
+const TEMPLATE_STANDARDS_MCP_MD: &str = include_str!("../templates/spox/standards/mcp.md");
 const TEMPLATE_SETUP_SH: &str = include_str!("../templates/spox/setup.sh");
 
 // .spox/specs/ templates
@@ -41,6 +43,7 @@ const TEMPLATE_CMD_ARCHIVE_MD: &str = include_str!("../templates/claude/commands
 const TEMPLATE_CMD_IMPLEMENT_MD: &str =
     include_str!("../templates/claude/commands/spox/implement.md");
 const TEMPLATE_CMD_PROPOSE_MD: &str = include_str!("../templates/claude/commands/spox/propose.md");
+const TEMPLATE_CMD_VIBE_MD: &str = include_str!("../templates/claude/commands/spox/vibe.md");
 
 // specs/ templates
 const TEMPLATE_MISSION_MD: &str = include_str!("../templates/specs/mission.md");
@@ -65,6 +68,7 @@ const TEMPLATE_CLAUDE_MD: &str = include_str!("../templates/spox/CLAUDE-template
 /// |   |   |-- coding.md
 /// |   |   |-- frontend.md
 /// |   |   |-- global.md
+/// |   |   |-- mcp.md
 /// |   |   |-- testing.md
 /// |   |   +-- vcs.md
 /// |   +-- specs/
@@ -84,7 +88,8 @@ const TEMPLATE_CLAUDE_MD: &str = include_str!("../templates/spox/CLAUDE-template
 /// |   +-- commands/spox/
 /// |       |-- archive.md
 /// |       |-- implement.md
-/// |       +-- propose.md
+/// |       |-- propose.md
+/// |       +-- vibe.md
 /// +-- specs/
 /// |   |-- mission.md
 /// |   |-- _changes/
@@ -117,11 +122,13 @@ pub fn run(base_path: &Path) -> Result<()> {
 fn create_spox_dir(base_path: &Path) -> Result<()> {
     let spox_dir = base_path.join(".spox");
     let standards_dir = spox_dir.join("standards");
+    let custom_dir = spox_dir.join("custom");
     let specs_dir = spox_dir.join("specs");
     let specs_change_dir = specs_dir.join("change");
 
     // Create directories
     create_dir_all(&standards_dir)?;
+    create_dir_all(&custom_dir)?;
     create_dir_all(&specs_change_dir)?;
 
     // Write config files
@@ -150,6 +157,7 @@ fn create_spox_dir(base_path: &Path) -> Result<()> {
         TEMPLATE_STANDARDS_TESTING_MD,
     )?;
     write_file(&standards_dir.join("vcs.md"), TEMPLATE_STANDARDS_VCS_MD)?;
+    write_file(&standards_dir.join("mcp.md"), TEMPLATE_STANDARDS_MCP_MD)?;
 
     // Write spec template files
     write_file(&specs_dir.join("spec.md"), TEMPLATE_SPEC_SPEC_MD)?;
@@ -221,6 +229,7 @@ fn create_claude_dir(base_path: &Path) -> Result<()> {
         &commands_spox_dir.join("propose.md"),
         TEMPLATE_CMD_PROPOSE_MD,
     )?;
+    write_file(&commands_spox_dir.join("vibe.md"), TEMPLATE_CMD_VIBE_MD)?;
 
     Ok(())
 }
@@ -300,16 +309,135 @@ fn is_claude_code_available() -> bool {
 const SPOX_START_MARKER: &str = "<!-- SPOX:START -->";
 const SPOX_END_MARKER: &str = "<!-- SPOX:END -->";
 
+/// Markers for CLAUDE.md template sections
+const MARKER_SYSTEM_TEMPLATES: &str = "<!-- SPOX:SYSTEM-TEMPLATES -->";
+const MARKER_USER_TEMPLATES: &str = "<!-- SPOX:USER-TEMPLATES -->";
+const MARKER_WORKFLOW: &str = "<!-- SPOX:WORKFLOW -->";
+
+/// Process the CLAUDE template by replacing section markers with content.
+///
+/// # Arguments
+/// * `template` - The CLAUDE template content
+/// * `system_templates` - Content for system templates (concatenated)
+/// * `user_templates` - Content for user templates (may be empty)
+/// * `workflow` - Content for workflow section
+fn process_claude_template(
+    template: &str,
+    system_templates: &str,
+    user_templates: &str,
+    workflow: &str,
+) -> String {
+    let result = template.replace(MARKER_SYSTEM_TEMPLATES, system_templates);
+
+    // Remove user templates section if empty, otherwise replace marker
+    let result = if user_templates.trim().is_empty() {
+        result
+            .replace(MARKER_USER_TEMPLATES, "")
+            .replace("\n\n\n", "\n\n")
+    } else {
+        result.replace(MARKER_USER_TEMPLATES, user_templates)
+    };
+
+    result.replace(MARKER_WORKFLOW, workflow)
+}
+
+/// Get the content for system templates based on config.
+fn get_system_templates_content(system_templates: &[String]) -> String {
+    let mut content = String::new();
+
+    for template_name in system_templates {
+        let template_content = match template_name.as_str() {
+            "mcp" => TEMPLATE_STANDARDS_MCP_MD,
+            "global" => TEMPLATE_STANDARDS_GLOBAL_MD,
+            "coding" => TEMPLATE_STANDARDS_CODING_MD,
+            "testing" => TEMPLATE_STANDARDS_TESTING_MD,
+            "backend" => TEMPLATE_STANDARDS_BACKEND_MD,
+            "frontend" => TEMPLATE_STANDARDS_FRONTEND_MD,
+            "vcs" => TEMPLATE_STANDARDS_VCS_MD,
+            _ => continue, // Skip invalid templates (already validated)
+        };
+
+        if !content.is_empty() {
+            content.push_str("\n\n");
+        }
+        content.push_str(template_content.trim());
+    }
+
+    content
+}
+
+/// Get the content for user templates based on config.
+///
+/// Returns the concatenated content of files listed in rules.custom.
+/// Files that don't exist are skipped with a warning printed to stderr.
+fn get_user_templates_content(base_path: &Path, custom_templates: &[String]) -> String {
+    let custom_dir = base_path.join(".spox").join("custom");
+    let mut content = String::new();
+
+    for template_name in custom_templates {
+        let template_path = custom_dir.join(template_name);
+
+        match fs::read_to_string(&template_path) {
+            Ok(template_content) => {
+                if !content.is_empty() {
+                    content.push_str("\n\n");
+                }
+                content.push_str(template_content.trim());
+            }
+            Err(_) => {
+                eprintln!(
+                    "Warning: custom template '{}' not found at {}",
+                    template_name,
+                    template_path.display()
+                );
+            }
+        }
+    }
+
+    content
+}
+
+/// Load config, migrating old format if needed.
+fn load_or_migrate_config(base_path: &Path) -> Result<Config> {
+    let config_path = base_path.join(".spox").join("config.toml");
+
+    match Config::load(&config_path) {
+        Ok(config) => Ok(config),
+        Err(Error::ConfigMissingField(field)) if field == "rules" || field == "paths" => {
+            // Old config format - write new config and load again
+            write_file(&config_path, TEMPLATE_CONFIG_TOML)?;
+            Config::load(&config_path)
+        }
+        Err(e) => Err(e),
+    }
+}
+
 /// Write CLAUDE.md, handling three cases:
-/// 1. File doesn't exist: copy template directly
-/// 2. File exists without markers: append SPOX block
+/// 1. File doesn't exist: process and write template
+/// 2. File exists without markers: append processed SPOX block
 /// 3. File exists with markers: replace content between markers
 fn write_claude_md(base_path: &Path) -> Result<()> {
     let claude_md_path = base_path.join("CLAUDE.md");
 
+    // Load config to get template list
+    let config = load_or_migrate_config(base_path)?;
+
+    // Build the content for each section
+    let system_content = get_system_templates_content(&config.rules.system);
+    let user_content = get_user_templates_content(base_path, &config.rules.custom);
+    let workflow_content = TEMPLATE_WORKFLOW_MD.trim().to_string();
+
+    // Process the template
+    let processed_template = process_claude_template(
+        TEMPLATE_CLAUDE_MD,
+        &system_content,
+        &user_content,
+        &workflow_content,
+    );
+
     if !claude_md_path.exists() {
-        // Case 1: Fresh project - copy template directly
-        return write_file(&claude_md_path, TEMPLATE_CLAUDE_MD);
+        // Case 1: Fresh project - write processed template directly
+        return write_file(&claude_md_path, &processed_template);
     }
 
     // File exists - read current content
@@ -325,7 +453,7 @@ fn write_claude_md(base_path: &Path) -> Result<()> {
         && existing_content.contains(SPOX_END_MARKER)
     {
         // Case 3: Replace content between markers
-        replace_spox_block(&existing_content, TEMPLATE_CLAUDE_MD)
+        replace_spox_block(&existing_content, &processed_template)
     } else {
         // Case 2: Append SPOX block to end
         let mut content = existing_content;
@@ -333,7 +461,7 @@ fn write_claude_md(base_path: &Path) -> Result<()> {
             content.push('\n');
         }
         content.push('\n');
-        content.push_str(TEMPLATE_CLAUDE_MD);
+        content.push_str(&processed_template);
         content
     };
 
@@ -397,6 +525,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("      coding.md");
         println!("      frontend.md");
         println!("      global.md");
+        println!("      mcp.md");
         println!("      testing.md");
         println!("      vcs.md");
         println!("    specs/");
@@ -417,6 +546,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("      archive.md");
         println!("      implement.md");
         println!("      propose.md");
+        println!("      vibe.md");
         println!("  specs/");
         println!("    mission.md");
         println!("    _changes/");
@@ -479,6 +609,7 @@ mod tests {
         assert!(standards.join("coding.md").exists());
         assert!(standards.join("frontend.md").exists());
         assert!(standards.join("global.md").exists());
+        assert!(standards.join("mcp.md").exists());
         assert!(standards.join("testing.md").exists());
         assert!(standards.join("vcs.md").exists());
     }
@@ -512,6 +643,7 @@ mod tests {
         assert!(claude.join("commands/spox/archive.md").exists());
         assert!(claude.join("commands/spox/implement.md").exists());
         assert!(claude.join("commands/spox/propose.md").exists());
+        assert!(claude.join("commands/spox/vibe.md").exists());
     }
 
     #[test]
@@ -615,6 +747,11 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let claude_md = temp.path().join("CLAUDE.md");
 
+        // Create .spox directory with config.toml (required for write_claude_md)
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML).unwrap();
+
         // Create existing CLAUDE.md without markers
         let existing_content = "# My Project\n\nSome custom instructions.\n";
         fs::write(&claude_md, existing_content).unwrap();
@@ -638,6 +775,11 @@ mod tests {
         let temp = TempDir::new().unwrap();
         let claude_md = temp.path().join("CLAUDE.md");
 
+        // Create .spox directory with config.toml (required for write_claude_md)
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML).unwrap();
+
         // Create existing CLAUDE.md with old SPOX block
         let existing_content = "# My Project\n\n<!-- SPOX:START -->\nOld SPOX content\n<!-- SPOX:END -->\n\n## My Custom Section\n";
         fs::write(&claude_md, existing_content).unwrap();
@@ -659,13 +801,18 @@ mod tests {
         // New SPOX block should be present
         assert!(result.contains(SPOX_START_MARKER));
         assert!(result.contains(SPOX_END_MARKER));
-        assert!(result.contains("## Spec Oxide Instructions"));
+        assert!(result.contains("# Standards Compliance and Guardrails"));
     }
 
     #[test]
     fn test_write_claude_md_preserves_content_outside_markers() {
         let temp = TempDir::new().unwrap();
         let claude_md = temp.path().join("CLAUDE.md");
+
+        // Create .spox directory with config.toml (required for write_claude_md)
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML).unwrap();
 
         // Create existing CLAUDE.md with content before and after SPOX block
         let existing_content = "# Header Before\n\nContent before.\n\n<!-- SPOX:START -->\nOld block\n<!-- SPOX:END -->\n\n# Header After\n\nContent after.\n";
@@ -733,7 +880,156 @@ mod tests {
     fn test_is_claude_code_available_returns_bool() {
         // This test just verifies the function runs without panicking
         // and returns a boolean. The actual result depends on the system.
-        let result = is_claude_code_available();
-        assert!(result == true || result == false);
+        let _result: bool = is_claude_code_available();
+        // If we got here, the function ran successfully
+    }
+
+    // ==================== Tests for CLAUDE.md template processing ====================
+
+    #[test]
+    fn test_process_claude_template() {
+        let template = "<!-- SPOX:START -->\n# Header\n\n<!-- SPOX:SYSTEM-TEMPLATES -->\n\n<!-- SPOX:USER-TEMPLATES -->\n\n<!-- SPOX:WORKFLOW -->\n\n<!-- SPOX:END -->";
+
+        let result = process_claude_template(
+            template,
+            "system content",
+            "user content",
+            "workflow content",
+        );
+
+        assert!(result.contains("system content"));
+        assert!(result.contains("user content"));
+        assert!(result.contains("workflow content"));
+    }
+
+    #[test]
+    fn test_process_claude_template_empty_user_templates() {
+        let template = "<!-- SPOX:START -->\n# Header\n\n<!-- SPOX:SYSTEM-TEMPLATES -->\n\n<!-- SPOX:USER-TEMPLATES -->\n\n<!-- SPOX:WORKFLOW -->\n\n<!-- SPOX:END -->";
+
+        let result = process_claude_template(template, "system content", "", "workflow content");
+
+        assert!(result.contains("system content"));
+        assert!(!result.contains("<!-- SPOX:USER-TEMPLATES -->"));
+        assert!(result.contains("workflow content"));
+    }
+
+    #[test]
+    fn test_get_system_templates_content() {
+        let templates = vec!["mcp".to_string(), "global".to_string()];
+        let content = get_system_templates_content(&templates);
+
+        // Should contain content from both templates
+        assert!(content.contains("MCP Tools"));
+        assert!(content.contains("General mindset"));
+    }
+
+    #[test]
+    fn test_get_system_templates_content_respects_order() {
+        let templates = vec!["global".to_string(), "mcp".to_string()];
+        let content = get_system_templates_content(&templates);
+
+        // global content should appear before mcp content
+        let global_pos = content.find("General mindset").unwrap();
+        let mcp_pos = content.find("MCP Tools").unwrap();
+        assert!(global_pos < mcp_pos);
+    }
+
+    #[test]
+    fn test_get_system_templates_content_skips_invalid() {
+        let templates = vec![
+            "mcp".to_string(),
+            "invalid-template".to_string(),
+            "global".to_string(),
+        ];
+        let content = get_system_templates_content(&templates);
+
+        // Should contain valid templates
+        assert!(content.contains("MCP Tools"));
+        assert!(content.contains("General mindset"));
+        // Should not panic or fail on invalid template
+    }
+
+    #[test]
+    fn test_get_user_templates_content_reads_files() {
+        let temp = TempDir::new().unwrap();
+        let custom_dir = temp.path().join(".spox").join("custom");
+        fs::create_dir_all(&custom_dir).unwrap();
+
+        // Create a custom template file
+        fs::write(
+            custom_dir.join("my-rules.md"),
+            "# My Custom Rules\n\nRule 1",
+        )
+        .unwrap();
+
+        let content = get_user_templates_content(temp.path(), &["my-rules.md".to_string()]);
+
+        assert!(content.contains("My Custom Rules"));
+        assert!(content.contains("Rule 1"));
+    }
+
+    #[test]
+    fn test_get_user_templates_content_missing_file_skipped() {
+        let temp = TempDir::new().unwrap();
+        let custom_dir = temp.path().join(".spox").join("custom");
+        fs::create_dir_all(&custom_dir).unwrap();
+
+        // Only create one file
+        fs::write(custom_dir.join("existing.md"), "Existing content").unwrap();
+
+        let content = get_user_templates_content(
+            temp.path(),
+            &["missing.md".to_string(), "existing.md".to_string()],
+        );
+
+        // Should contain the existing file's content
+        assert!(content.contains("Existing content"));
+        // Should not fail on missing file
+    }
+
+    #[test]
+    fn test_init_creates_custom_directory() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+        assert!(temp.path().join(".spox/custom").exists());
+    }
+
+    #[test]
+    fn test_claude_md_contains_merged_standards() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        let claude_md = temp.path().join("CLAUDE.md");
+        let content = fs::read_to_string(&claude_md).unwrap();
+
+        // Should contain merged system templates
+        assert!(content.contains("MCP Tools")); // from mcp.md
+        assert!(content.contains("General mindset")); // from global.md
+        assert!(content.contains("# Spec Oxide Workflow")); // from workflow.md header
+    }
+
+    #[test]
+    fn test_claude_md_has_no_leftover_markers() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        let claude_md = temp.path().join("CLAUDE.md");
+        let content = fs::read_to_string(&claude_md).unwrap();
+
+        // Should not contain template markers (they should be replaced)
+        assert!(!content.contains("<!-- SPOX:SYSTEM-TEMPLATES -->"));
+        assert!(!content.contains("<!-- SPOX:USER-TEMPLATES -->"));
+        assert!(!content.contains("<!-- SPOX:WORKFLOW -->"));
+    }
+
+    #[test]
+    fn test_load_or_migrate_config_loads_valid_config() {
+        let temp = TempDir::new().unwrap();
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML).unwrap();
+
+        let config = load_or_migrate_config(temp.path()).unwrap();
+        assert!(!config.rules.system.is_empty());
     }
 }

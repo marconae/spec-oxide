@@ -27,7 +27,7 @@ pub fn run_spec_validate(id: Option<String>, strict: bool) -> Result<()> {
 
     if let Some(spec_id) = id {
         // Validate single spec
-        let spec_path = Path::new(&config.spec_folder)
+        let spec_path = Path::new(config.spec_folder())
             .join(&spec_id)
             .join("spec.md");
 
@@ -41,7 +41,7 @@ pub fn run_spec_validate(id: Option<String>, strict: bool) -> Result<()> {
         exit_on_failure(&report, strict);
     } else {
         // Validate all specs
-        run_bulk_spec_validation(&config.spec_folder, strict)?;
+        run_bulk_spec_validation(config.spec_folder(), strict)?;
     }
 
     Ok(())
@@ -64,7 +64,7 @@ pub fn run_change_validate(id: Option<String>, strict: bool) -> Result<()> {
 
     if let Some(change_id) = id {
         // Validate single change
-        let change_path = Path::new(&config.changes_folder).join(&change_id);
+        let change_path = Path::new(config.changes_folder()).join(&change_id);
 
         if !change_path.exists() {
             eprintln!(
@@ -85,7 +85,7 @@ pub fn run_change_validate(id: Option<String>, strict: bool) -> Result<()> {
         }
     } else {
         // Validate all changes
-        run_bulk_change_validation(&config.changes_folder, strict)?;
+        run_bulk_change_validation(config.changes_folder(), strict)?;
     }
 
     Ok(())

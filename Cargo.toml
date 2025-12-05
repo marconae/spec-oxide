@@ -1,6 +1,6 @@
 [package]
 name = "spec-oxide"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Marco Nätlitz"]
 edition = "2021"
 description = "Spec-driven development for humans and AI"

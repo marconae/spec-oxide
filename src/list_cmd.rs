@@ -103,7 +103,7 @@ pub fn run_spec_list() -> Result<()> {
     let config_path = Path::new(".spox/config.toml");
     let config = Config::load(config_path)?;
 
-    let specs = gather_specs(&config.spec_folder).map_err(Error::Other)?;
+    let specs = gather_specs(config.spec_folder()).map_err(Error::Other)?;
     let output = format_spec_list(&specs);
     println!("{}", output);
 
@@ -121,7 +121,7 @@ pub fn run_change_list() -> Result<()> {
     let config_path = Path::new(".spox/config.toml");
     let config = Config::load(config_path)?;
 
-    let changes = gather_changes(&config.changes_folder).map_err(Error::Other)?;
+    let changes = gather_changes(config.changes_folder()).map_err(Error::Other)?;
     let output = format_change_list(&changes);
     println!("{}", output);
 

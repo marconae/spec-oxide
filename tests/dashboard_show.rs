@@ -11,10 +11,15 @@ mod common {
     /// Create a minimal spox.toml config file
     pub fn create_config(root: &Path, spec_folder: &str, changes_folder: &str) {
         let config = format!(
-            r#"spec_folder = "{}"
+            r#"[paths]
+spec_folder = "{}"
 changes_folder = "{}"
+archive_folder = "{}_archive"
+
+[rules]
+system = ["mcp"]
 "#,
-            spec_folder, changes_folder
+            spec_folder, changes_folder, changes_folder
         );
         fs::write(root.join("spox.toml"), config).unwrap();
     }

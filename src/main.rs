@@ -53,7 +53,7 @@ fn run(cmd: Commands) -> error::Result<()> {
             ChangeCommands::Approve => not_implemented("change approve"),
         },
         Commands::Config(action) => match action {
-            ConfigCommands::Show => config_cmd::run_show(),
+            ConfigCommands::Show { paths } => config_cmd::run_show(paths),
         },
     }
 }
