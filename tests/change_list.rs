@@ -17,9 +17,13 @@ fn create_config(root: &std::path::Path, spec_folder: &str, changes_folder: &str
     fs::create_dir_all(&spox_dir).unwrap();
 
     let config = format!(
-        r#"spec_folder = "{}"
+        r#"[paths]
+spec_folder = "{}"
 changes_folder = "{}"
 archive_folder = "{}_archive"
+
+[rules]
+system = ["mcp"]
 "#,
         spec_folder, changes_folder, changes_folder
     );
@@ -364,9 +368,13 @@ fn test_change_list_changes_folder_does_not_exist() {
     let spox_dir = root.join(".spox");
     fs::create_dir_all(&spox_dir).unwrap();
 
-    let config = r#"spec_folder = "specs"
+    let config = r#"[paths]
+spec_folder = "specs"
 changes_folder = "nonexistent"
 archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp"]
 "#;
     fs::write(spox_dir.join("config.toml"), config).unwrap();
 

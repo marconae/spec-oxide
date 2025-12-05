@@ -96,5 +96,9 @@ pub enum ChangeCommands {
 #[derive(Subcommand, Debug)]
 pub enum ConfigCommands {
     /// Show configuration
-    Show,
+    Show {
+        /// Show only the paths section
+        #[arg(long)]
+        paths: bool,
+    },
 }

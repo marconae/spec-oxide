@@ -37,7 +37,7 @@ pub fn run_spec_show(id: Option<String>) -> Result<()> {
 
     match id {
         Some(spec_id) => {
-            let spec_path = Path::new(&config.spec_folder)
+            let spec_path = Path::new(config.spec_folder())
                 .join(&spec_id)
                 .join("spec.md");
 
@@ -72,7 +72,7 @@ pub fn run_change_show(id: Option<String>, deltas_only: bool) -> Result<()> {
 
     match id {
         Some(change_id) => {
-            let change_path = Path::new(&config.changes_folder).join(&change_id);
+            let change_path = Path::new(config.changes_folder()).join(&change_id);
 
             if !change_path.exists() {
                 return Err(Error::Other(format!("Change '{}' not found", change_id)));

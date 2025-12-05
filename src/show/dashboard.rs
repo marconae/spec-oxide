@@ -51,8 +51,8 @@ pub struct DashboardInfo {
 /// `Ok(DashboardInfo)` containing specs and changes, or `Err` with error message.
 pub fn gather_dashboard(config: &Config) -> Result<DashboardInfo, String> {
     Ok(DashboardInfo {
-        specs: gather_specs(&config.spec_folder)?,
-        changes: gather_changes(&config.changes_folder)?,
+        specs: gather_specs(config.spec_folder())?,
+        changes: gather_changes(config.changes_folder())?,
     })
 }
 
