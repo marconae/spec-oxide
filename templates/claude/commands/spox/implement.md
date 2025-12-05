@@ -5,20 +5,6 @@ category: Spec Oxide
 tags: [ spox, implement ]
 ---
 
-## Standards Compliance
-
-Read and **ensure** your work aligns with the following standards, conventions, rules and workflows:
-
-- @.spox/standards/mcp.md — MCP tool preferences
-- @.spox/standards/global.md — Cross-cutting standards
-- @.spox/standards/coding.md — General coding conventions
-- @.spox/standards/testing.md — TDD rules and verification
-- @.spox/standards/backend.md — API, database, and query standards
-- @.spox/standards/frontend.md — UI components, CSS, responsive design
-- @.spox/standards/vcs.md — Version control standards
-- @.spox/workflow.md — Spex Oxide (SpOx) workflow
-- @specs/mission.md — Project mission, goals and high-level architecture
-
 ## Goal
 
 **Build exactly what was approved—nothing more, nothing less.**

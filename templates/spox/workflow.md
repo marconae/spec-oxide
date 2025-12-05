@@ -1,8 +1,6 @@
-# Spec Oxide Workflow
-
 ## Why Spec-Driven Development?
 
-AI coding assistants are powerful but unpredictable when requirements live only in chat history. Spec Oxide locks intent
+You are working on a project that uses spec-driven development with Spec Oxide (short SpOx). Spec Oxide locks intent
 before implementation: you agree on *what* to build before writing any code, giving you deterministic, reviewable
 outputs.
 
@@ -15,6 +13,8 @@ outputs.
 - `specs/_changes/` — proposed updates (spec deltas) (what you want to change)
 
 This separation keeps diffs explicit and makes multi-spec updates manageable.
+
+**CLI:** Spec Oxide uses a CLI tool called `spox` to list, view, and validate specs and changes.
 
 **Template for specs:**
 
