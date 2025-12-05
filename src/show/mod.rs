@@ -41,7 +41,6 @@ const YELLOW: &str = "33";
 const RED: &str = "31";
 const BLUE: &str = "34";
 const DIM: &str = "2";
-const BOLD: &str = "1";
 
 /// Cyan bold text - for headers and names.
 pub fn cyan_bold(text: &str) -> String {
@@ -71,11 +70,6 @@ pub fn blue(text: &str) -> String {
 /// Dim text - for counts and scenarios.
 pub fn dim(text: &str) -> String {
     color(text, DIM)
-}
-
-/// Bold text - for emphasis.
-pub fn bold(text: &str) -> String {
-    color(text, BOLD)
 }
 
 /// Create a progress bar visualization.
@@ -348,12 +342,6 @@ mod tests {
         assert_eq!(result, "\x1b[2mcount\x1b[0m");
     }
 
-    #[test]
-    fn test_color_always_bold() {
-        let result = color_always("emphasis", BOLD);
-        assert_eq!(result, "\x1b[1memphasis\x1b[0m");
-    }
-
     // Test that color() function logic works correctly
     #[test]
     fn test_color_function_structure() {
@@ -380,7 +368,6 @@ mod tests {
         let _ = red("test");
         let _ = blue("test");
         let _ = dim("test");
-        let _ = bold("test");
     }
 
     #[test]

@@ -24,7 +24,7 @@ impl Config {
     /// # Errors
     ///
     /// Returns `Error::ConfigNotFound` if the file does not exist.
-    /// Returns `Error::ConfigParseError` if the file cannot be parsed as TOML.
+    /// Returns `Error::ConfigParse` if the file cannot be parsed as TOML.
     /// Returns `Error::ConfigMissingField` if a required field is missing.
     pub fn load(path: &Path) -> Result<Config> {
         if !path.exists() {
@@ -32,7 +32,7 @@ impl Config {
         }
 
         let content = fs::read_to_string(path)
-            .map_err(|e| Error::ConfigParseError(format!("failed to read file: {}", e)))?;
+            .map_err(|e| Error::ConfigParse(format!("failed to read file: {}", e)))?;
 
         let config: Config = toml::from_str(&content).map_err(|e| {
             let msg = e.message();
@@ -43,7 +43,7 @@ impl Config {
                     return Error::ConfigMissingField(field.to_string());
                 }
             }
-            Error::ConfigParseError(msg.to_string())
+            Error::ConfigParse(msg.to_string())
         })?;
 
         Ok(config)
@@ -103,6 +103,6 @@ spec_folder = "specs/"
         writeln!(file, "this is not valid toml {{{{").unwrap();
 
         let result = Config::load(file.path());
-        assert!(matches!(result, Err(Error::ConfigParseError(_))));
+        assert!(matches!(result, Err(Error::ConfigParse(_))));
     }
 }

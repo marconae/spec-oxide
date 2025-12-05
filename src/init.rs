@@ -238,7 +238,7 @@ fn create_specs_dir(base_path: &Path) -> Result<()> {
 /// Create a directory and all its parents.
 fn create_dir_all(path: &Path) -> Result<()> {
     fs::create_dir_all(path).map_err(|e| {
-        Error::InitError(format!(
+        Error::Init(format!(
             "failed to create directory '{}': {}",
             path.display(),
             e
@@ -249,7 +249,7 @@ fn create_dir_all(path: &Path) -> Result<()> {
 /// Write content to a file, creating parent directories if needed.
 fn write_file(path: &Path, content: &str) -> Result<()> {
     fs::write(path, content)
-        .map_err(|e| Error::InitError(format!("failed to write file '{}': {}", path.display(), e)))
+        .map_err(|e| Error::Init(format!("failed to write file '{}': {}", path.display(), e)))
 }
 
 /// Write content to a file only if it does not already exist.
@@ -277,7 +277,7 @@ fn write_claude_md(base_path: &Path) -> Result<()> {
 
     // File exists - read current content
     let existing_content = fs::read_to_string(&claude_md_path).map_err(|e| {
-        Error::InitError(format!(
+        Error::Init(format!(
             "failed to read '{}': {}",
             claude_md_path.display(),
             e

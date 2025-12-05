@@ -39,12 +39,7 @@ fn validate_spec_content(content: &str, file_path: &str, report: &mut Validation
     let lines: Vec<&str> = content.lines().collect();
 
     // Check for Purpose section
-    let purpose_result = find_section(&lines, "## Purpose");
-    if purpose_result.is_none() {
-        report.add_error(file_path, Some(1), "Missing Purpose section");
-    } else {
-        // Check Purpose length
-        let (purpose_line, _) = purpose_result.unwrap();
+    if let Some((purpose_line, _)) = find_section(&lines, "## Purpose") {
         let purpose_text = extract_section_text(&lines, purpose_line);
         if purpose_text.len() < MIN_PURPOSE_LENGTH {
             report.add_warning(
@@ -57,16 +52,18 @@ fn validate_spec_content(content: &str, file_path: &str, report: &mut Validation
                 ),
             );
         }
+    } else {
+        report.add_error(file_path, Some(1), "Missing Purpose section");
     }
 
     // Check for Requirements section
-    let requirements_result = find_section(&lines, "## Requirements");
-    if requirements_result.is_none() {
-        report.add_error(file_path, Some(1), "Missing Requirements section");
-        return; // Cannot validate requirements if section is missing
-    }
-
-    let (requirements_line, _) = requirements_result.unwrap();
+    let requirements_line = match find_section(&lines, "## Requirements") {
+        Some((line, _)) => line,
+        None => {
+            report.add_error(file_path, Some(1), "Missing Requirements section");
+            return; // Cannot validate requirements if section is missing
+        }
+    };
 
     // Parse and validate each requirement block
     let requirements = parse_requirements(&lines, requirements_line);

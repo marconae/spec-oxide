@@ -27,6 +27,7 @@ pub struct ChangeValidationResult {
     /// The validation report with all issues found.
     pub report: ValidationReport,
     /// Task statistics (if tasks.md was found and validated).
+    #[allow(dead_code)] // Reserved for future CLI display of task progress
     pub task_stats: Option<TaskStats>,
 }
 
@@ -162,11 +163,7 @@ fn validate_proposal(content: &str, file_path: &str, report: &mut ValidationRepo
     let lines: Vec<&str> = content.lines().collect();
 
     // Check for Why section
-    let why_result = find_section(&lines, "Why");
-    if why_result.is_none() {
-        report.add_error(file_path, Some(1), "Missing Why section");
-    } else {
-        let (why_line, _) = why_result.unwrap();
+    if let Some((why_line, _)) = find_section(&lines, "Why") {
         let why_text = extract_section_text(&lines, why_line);
         if why_text.len() < MIN_WHY_LENGTH {
             report.add_warning(
@@ -179,11 +176,12 @@ fn validate_proposal(content: &str, file_path: &str, report: &mut ValidationRepo
                 ),
             );
         }
+    } else {
+        report.add_error(file_path, Some(1), "Missing Why section");
     }
 
     // Check for What Changes section
-    let what_changes_result = find_section(&lines, "What Changes");
-    if what_changes_result.is_none() {
+    if find_section(&lines, "What Changes").is_none() {
         report.add_error(file_path, Some(1), "Missing What Changes section");
     }
 }

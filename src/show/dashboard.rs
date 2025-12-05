@@ -50,15 +50,10 @@ pub struct DashboardInfo {
 /// # Returns
 /// `Ok(DashboardInfo)` containing specs and changes, or `Err` with error message.
 pub fn gather_dashboard(config: &Config) -> Result<DashboardInfo, String> {
-    let mut info = DashboardInfo::default();
-
-    // Gather specs
-    info.specs = gather_specs(&config.spec_folder)?;
-
-    // Gather active changes (excluding _archive)
-    info.changes = gather_changes(&config.changes_folder)?;
-
-    Ok(info)
+    Ok(DashboardInfo {
+        specs: gather_specs(&config.spec_folder)?,
+        changes: gather_changes(&config.changes_folder)?,
+    })
 }
 
 /// Gather all specs with requirement counts.
