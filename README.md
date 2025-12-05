@@ -10,6 +10,18 @@ Spec Oxide is a comprehensive workflow that enables spec-driven development for 
 
 The workflow is augmented by the `spox` CLI tool.
 
+## Supported Platforms
+
+- **Linux** - Fully supported
+- **macOS** - Fully supported
+- **Windows** - Requires [WSL (Windows Subsystem for Linux)](https://learn.microsoft.com/en-us/windows/wsl/install)
+
+## Prerequisites
+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - AI coding assistant
+- [uv](https://docs.astral.sh/uv/) - Required for Serena MCP server
+- [Node.js 18+](https://nodejs.org/) - Required for Context7 MCP server
+
 ## Installation
 
 ```bash
@@ -22,6 +34,9 @@ cargo install --path .
 # Initialize a new project
 spox init
 
+# Run the setup script to configure MCP servers (Serena, Context7)
+.spox/setup.sh
+
 # View project dashboard (human-friendly, colored output)
 spox show
 
@@ -33,6 +48,12 @@ spox spec show auth
 spox spec validate
 spox change validate
 ```
+
+The setup script will:
+- Check for required prerequisites (Claude Code, uv, Node.js)
+- Configure Serena MCP for code-aware AI assistance
+- Configure Context7 MCP for documentation lookup
+- Index your project for Serena
 
 ## Commands
 
