@@ -9,4 +9,9 @@
 
 <!-- SPOX:WORKFLOW -->
 
+# Project Mission
+
+Read and understand the project mission:
+@specs/mission.md
+
 <!-- SPOX:END -->

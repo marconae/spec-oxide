@@ -87,7 +87,7 @@ fn test_version_flag_contains_version_number() {
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("0.1.0"));
+        .stdout(predicate::str::contains("0.2.0"));
 }
 
 #[test]
@@ -332,38 +332,6 @@ fn test_reinit_overwrites_commands() {
 }
 
 #[test]
-fn test_reinit_overwrites_standards() {
-    let temp_dir = TempDir::new().unwrap();
-
-    // First init
-    spox_cmd()
-        .arg("init")
-        .arg("--path")
-        .arg(temp_dir.path())
-        .assert()
-        .success();
-
-    // Modify .spox/standards/coding.md with custom content
-    let standards_path = temp_dir.path().join(".spox/standards/coding.md");
-    let original_content = std::fs::read_to_string(&standards_path).unwrap();
-    let custom_content = "# Custom Standards\n\nThis has been modified.\n";
-    std::fs::write(&standards_path, custom_content).unwrap();
-
-    // Second init
-    spox_cmd()
-        .arg("init")
-        .arg("--path")
-        .arg(temp_dir.path())
-        .assert()
-        .success();
-
-    // Verify .spox/standards/coding.md has been reset to template
-    let content = std::fs::read_to_string(&standards_path).unwrap();
-    assert_ne!(content, custom_content);
-    assert_eq!(content, original_content);
-}
-
-#[test]
 fn test_reinit_does_not_touch_specs_directory() {
     let temp_dir = TempDir::new().unwrap();
 
@@ -416,46 +384,6 @@ fn test_init_creates_spox_config_file() {
     assert!(content.contains("spec_folder"));
     assert!(content.contains("changes_folder"));
     assert!(content.contains("archive_folder"));
-}
-
-#[test]
-fn test_init_creates_spox_workflow_file() {
-    let temp_dir = TempDir::new().unwrap();
-
-    spox_cmd()
-        .arg("init")
-        .arg("--path")
-        .arg(temp_dir.path())
-        .assert()
-        .success();
-
-    let workflow_path = temp_dir.path().join(".spox/workflow.md");
-    assert!(workflow_path.exists());
-    assert!(workflow_path.is_file());
-}
-
-#[test]
-fn test_init_creates_standards_directory() {
-    let temp_dir = TempDir::new().unwrap();
-
-    spox_cmd()
-        .arg("init")
-        .arg("--path")
-        .arg(temp_dir.path())
-        .assert()
-        .success();
-
-    let standards_dir = temp_dir.path().join(".spox/standards");
-    assert!(standards_dir.exists());
-    assert!(standards_dir.is_dir());
-
-    // Verify all 6 standards files exist
-    assert!(standards_dir.join("backend.md").exists());
-    assert!(standards_dir.join("coding.md").exists());
-    assert!(standards_dir.join("frontend.md").exists());
-    assert!(standards_dir.join("global.md").exists());
-    assert!(standards_dir.join("testing.md").exists());
-    assert!(standards_dir.join("vcs.md").exists());
 }
 
 #[test]
@@ -526,7 +454,7 @@ fn test_init_creates_specs_directory() {
 }
 
 #[test]
-fn test_init_creates_spox_specs_templates_directory() {
+fn test_init_creates_spox_templates_directory() {
     let temp_dir = TempDir::new().unwrap();
 
     spox_cmd()
@@ -536,16 +464,15 @@ fn test_init_creates_spox_specs_templates_directory() {
         .assert()
         .success();
 
-    let specs_dir = temp_dir.path().join(".spox/specs");
-    assert!(specs_dir.exists());
-    assert!(specs_dir.is_dir());
+    let templates_dir = temp_dir.path().join(".spox/templates");
+    assert!(templates_dir.exists());
+    assert!(templates_dir.is_dir());
 
-    // Verify spec template files exist
-    assert!(specs_dir.join("spec.md").exists());
-    assert!(specs_dir.join("mission.md").exists());
+    // Verify spec template file exists
+    assert!(templates_dir.join("spec.md").exists());
 
     // Verify change subdirectory and its files
-    let change_dir = specs_dir.join("change");
+    let change_dir = templates_dir.join("change");
     assert!(change_dir.exists());
     assert!(change_dir.is_dir());
     assert!(change_dir.join("proposal.md").exists());
@@ -566,34 +493,32 @@ fn test_init_verifies_all_files_copied_correctly() {
         .assert()
         .success();
 
-    // .spox/ files (2 files)
+    // .spox/ files
     assert!(temp_dir.path().join(".spox/config.toml").exists());
-    assert!(temp_dir.path().join(".spox/workflow.md").exists());
+    assert!(temp_dir.path().join(".spox/setup.sh").exists());
+    assert!(temp_dir.path().join(".spox/custom").is_dir());
 
-    // .spox/standards/ files (6 files)
-    assert!(temp_dir.path().join(".spox/standards/backend.md").exists());
-    assert!(temp_dir.path().join(".spox/standards/coding.md").exists());
-    assert!(temp_dir.path().join(".spox/standards/frontend.md").exists());
-    assert!(temp_dir.path().join(".spox/standards/global.md").exists());
-    assert!(temp_dir.path().join(".spox/standards/testing.md").exists());
-    assert!(temp_dir.path().join(".spox/standards/vcs.md").exists());
-
-    // .spox/specs/ files (2 files + change subdirectory with 5 files)
-    assert!(temp_dir.path().join(".spox/specs/spec.md").exists());
-    assert!(temp_dir.path().join(".spox/specs/mission.md").exists());
+    // .spox/templates/ files (1 file + change subdirectory with 5 files)
+    assert!(temp_dir.path().join(".spox/templates/spec.md").exists());
     assert!(temp_dir
         .path()
-        .join(".spox/specs/change/proposal.md")
+        .join(".spox/templates/change/proposal.md")
         .exists());
-    assert!(temp_dir.path().join(".spox/specs/change/tasks.md").exists());
     assert!(temp_dir
         .path()
-        .join(".spox/specs/change/design.md")
+        .join(".spox/templates/change/tasks.md")
         .exists());
-    assert!(temp_dir.path().join(".spox/specs/change/spec.md").exists());
     assert!(temp_dir
         .path()
-        .join(".spox/specs/change/verification.md")
+        .join(".spox/templates/change/design.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".spox/templates/change/spec.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".spox/templates/change/verification.md")
         .exists());
 
     // .claude/agents/ files (3 files with spox- prefix)
@@ -642,8 +567,9 @@ fn test_init_output_shows_created_structure() {
         .success()
         .stdout(predicate::str::contains(".spox/"))
         .stdout(predicate::str::contains("config.toml"))
-        .stdout(predicate::str::contains("workflow.md"))
-        .stdout(predicate::str::contains("standards/"))
+        .stdout(predicate::str::contains("setup.sh"))
+        .stdout(predicate::str::contains("custom/"))
+        .stdout(predicate::str::contains("templates/"))
         .stdout(predicate::str::contains(".claude/"))
         .stdout(predicate::str::contains("agents/"))
         .stdout(predicate::str::contains("commands/spox/"))
