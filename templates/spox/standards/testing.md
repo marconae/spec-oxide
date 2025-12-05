@@ -1,12 +1,14 @@
 ## Testing
 
-### The Law
+### Guardrails for Testing
 
-**Test Driven Development. NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.**
-
-Write code before test? Delete it. Start over. No exceptions.
+- You have to use Test Driven Development (TDD).
+- **NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST.**
+- Write code before test? Delete it. Start over. No exceptions.
 
 ### Red-Green-Refactor Cycle
+
+Apply the Red-Green-Refactor cycle to every new feature or bug fix:
 
 ```
 RED → verify fails → GREEN → verify passes → REFACTOR → repeat
