@@ -23,7 +23,6 @@ const TEMPLATE_SETUP_SH: &str = include_str!("../templates/spox/setup.sh");
 
 // .spox/specs/ templates
 const TEMPLATE_SPEC_SPEC_MD: &str = include_str!("../templates/specs/spec.md");
-const TEMPLATE_SPEC_MISSION_MD: &str = include_str!("../templates/specs/mission.md");
 const TEMPLATE_SPEC_CHANGE_PROPOSAL_MD: &str =
     include_str!("../templates/specs/change/proposal.md");
 const TEMPLATE_SPEC_CHANGE_TASKS_MD: &str = include_str!("../templates/specs/change/tasks.md");
@@ -51,6 +50,10 @@ const TEMPLATE_MISSION_MD: &str = include_str!("../templates/specs/mission.md");
 // CLAUDE.md template
 const TEMPLATE_CLAUDE_MD: &str = include_str!("../templates/spox/CLAUDE-template.md");
 
+// .gitignore templates for spox-managed directories
+const TEMPLATE_SPOX_GITIGNORE: &str = include_str!("../templates/spox/gitignore");
+const TEMPLATE_CLAUDE_GITIGNORE: &str = include_str!("../templates/claude/gitignore");
+
 /// Initialize or update a Spox project at the given path.
 ///
 /// On fresh projects, creates the full structure. On existing projects,
@@ -61,19 +64,10 @@ const TEMPLATE_CLAUDE_MD: &str = include_str!("../templates/spox/CLAUDE-template
 /// project/
 /// |-- .spox/
 /// |   |-- config.toml
-/// |   |-- workflow.md
 /// |   |-- setup.sh
-/// |   |-- standards/
-/// |   |   |-- backend.md
-/// |   |   |-- coding.md
-/// |   |   |-- frontend.md
-/// |   |   |-- global.md
-/// |   |   |-- mcp.md
-/// |   |   |-- testing.md
-/// |   |   +-- vcs.md
-/// |   +-- specs/
+/// |   |-- custom/
+/// |   +-- templates/
 /// |       |-- spec.md
-/// |       |-- mission.md
 /// |       +-- change/
 /// |           |-- proposal.md
 /// |           |-- tasks.md
@@ -121,65 +115,40 @@ pub fn run(base_path: &Path) -> Result<()> {
 /// Create the .spox/ directory structure.
 fn create_spox_dir(base_path: &Path) -> Result<()> {
     let spox_dir = base_path.join(".spox");
-    let standards_dir = spox_dir.join("standards");
     let custom_dir = spox_dir.join("custom");
-    let specs_dir = spox_dir.join("specs");
-    let specs_change_dir = specs_dir.join("change");
+    let templates_dir = spox_dir.join("templates");
+    let templates_change_dir = templates_dir.join("change");
 
     // Create directories
-    create_dir_all(&standards_dir)?;
     create_dir_all(&custom_dir)?;
-    create_dir_all(&specs_change_dir)?;
+    create_dir_all(&templates_change_dir)?;
 
-    // Write config files
+    // Write config file
     write_file(&spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML)?;
-    write_file(&spox_dir.join("workflow.md"), TEMPLATE_WORKFLOW_MD)?;
 
-    // Write standards files
-    write_file(
-        &standards_dir.join("backend.md"),
-        TEMPLATE_STANDARDS_BACKEND_MD,
-    )?;
-    write_file(
-        &standards_dir.join("coding.md"),
-        TEMPLATE_STANDARDS_CODING_MD,
-    )?;
-    write_file(
-        &standards_dir.join("frontend.md"),
-        TEMPLATE_STANDARDS_FRONTEND_MD,
-    )?;
-    write_file(
-        &standards_dir.join("global.md"),
-        TEMPLATE_STANDARDS_GLOBAL_MD,
-    )?;
-    write_file(
-        &standards_dir.join("testing.md"),
-        TEMPLATE_STANDARDS_TESTING_MD,
-    )?;
-    write_file(&standards_dir.join("vcs.md"), TEMPLATE_STANDARDS_VCS_MD)?;
-    write_file(&standards_dir.join("mcp.md"), TEMPLATE_STANDARDS_MCP_MD)?;
+    // Write .gitignore for spox-managed files
+    append_gitignore_rules(&spox_dir.join(".gitignore"), TEMPLATE_SPOX_GITIGNORE)?;
 
     // Write spec template files
-    write_file(&specs_dir.join("spec.md"), TEMPLATE_SPEC_SPEC_MD)?;
-    write_file(&specs_dir.join("mission.md"), TEMPLATE_SPEC_MISSION_MD)?;
+    write_file(&templates_dir.join("spec.md"), TEMPLATE_SPEC_SPEC_MD)?;
     write_file(
-        &specs_change_dir.join("proposal.md"),
+        &templates_change_dir.join("proposal.md"),
         TEMPLATE_SPEC_CHANGE_PROPOSAL_MD,
     )?;
     write_file(
-        &specs_change_dir.join("tasks.md"),
+        &templates_change_dir.join("tasks.md"),
         TEMPLATE_SPEC_CHANGE_TASKS_MD,
     )?;
     write_file(
-        &specs_change_dir.join("design.md"),
+        &templates_change_dir.join("design.md"),
         TEMPLATE_SPEC_CHANGE_DESIGN_MD,
     )?;
     write_file(
-        &specs_change_dir.join("spec.md"),
+        &templates_change_dir.join("spec.md"),
         TEMPLATE_SPEC_CHANGE_SPEC_MD,
     )?;
     write_file(
-        &specs_change_dir.join("verification.md"),
+        &templates_change_dir.join("verification.md"),
         TEMPLATE_SPEC_CHANGE_VERIFICATION_MD,
     )?;
 
@@ -201,6 +170,9 @@ fn create_claude_dir(base_path: &Path) -> Result<()> {
     // Create directories
     create_dir_all(&agents_dir)?;
     create_dir_all(&commands_spox_dir)?;
+
+    // Write .gitignore for spox-managed files in .claude/
+    append_gitignore_rules(&claude_dir.join(".gitignore"), TEMPLATE_CLAUDE_GITIGNORE)?;
 
     // Write agent files (flat in agents/, files already have spox- prefix)
     write_file(
@@ -274,6 +246,86 @@ fn write_file_if_not_exists(path: &Path, content: &str) -> Result<()> {
     if !path.exists() {
         write_file(path, content)?;
     }
+    Ok(())
+}
+
+/// Append gitignore rules to a .gitignore file, avoiding duplicates.
+/// Creates the file if it doesn't exist.
+fn append_gitignore_rules(gitignore_path: &Path, template_content: &str) -> Result<()> {
+    use std::collections::HashSet;
+
+    // Read existing content or start with empty string
+    let existing_content = if gitignore_path.exists() {
+        fs::read_to_string(gitignore_path).map_err(|e| {
+            Error::Init(format!(
+                "failed to read file '{}': {}",
+                gitignore_path.display(),
+                e
+            ))
+        })?
+    } else {
+        String::new()
+    };
+
+    // Parse existing rules (non-empty, non-comment lines)
+    let existing_rules: HashSet<&str> = existing_content
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect();
+
+    // Find new rules to add
+    let mut new_rules = Vec::new();
+    for line in template_content.lines() {
+        let trimmed = line.trim();
+        if !trimmed.is_empty() && !trimmed.starts_with('#') {
+            if !existing_rules.contains(trimmed) {
+                new_rules.push(line);
+            }
+        } else {
+            // Keep comments and empty lines from template for new additions
+            new_rules.push(line);
+        }
+    }
+
+    // If file doesn't exist, write full template
+    if !gitignore_path.exists() {
+        fs::write(gitignore_path, template_content).map_err(|e| {
+            Error::Init(format!(
+                "failed to write file '{}': {}",
+                gitignore_path.display(),
+                e
+            ))
+        })?;
+        return Ok(());
+    }
+
+    // If we have new rules to add, append them
+    if new_rules
+        .iter()
+        .any(|line| !line.trim().is_empty() && !line.trim().starts_with('#'))
+    {
+        let mut content = existing_content;
+        if !content.ends_with('\n') {
+            content.push('\n');
+        }
+        content.push_str("\n# Added by spox init\n");
+        for rule in new_rules {
+            let trimmed = rule.trim();
+            if !trimmed.is_empty() && !trimmed.starts_with('#') {
+                content.push_str(rule);
+                content.push('\n');
+            }
+        }
+        fs::write(gitignore_path, content).map_err(|e| {
+            Error::Init(format!(
+                "failed to write file '{}': {}",
+                gitignore_path.display(),
+                e
+            ))
+        })?;
+    }
+
     Ok(())
 }
 
@@ -504,7 +556,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("Updated Spox tooling in {}", path_display);
         println!();
         println!("Updated tooling files:");
-        println!("  .spox/           (config, workflow, standards, spec templates, setup.sh)");
+        println!("  .spox/           (config, workflow, standards, templates, setup.sh)");
         println!("  .claude/         (agents, commands)");
         println!("  CLAUDE.md        (SPOX block)");
         println!();
@@ -518,19 +570,10 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("Created structure:");
         println!("  .spox/");
         println!("    config.toml");
-        println!("    workflow.md");
         println!("    setup.sh");
-        println!("    standards/");
-        println!("      backend.md");
-        println!("      coding.md");
-        println!("      frontend.md");
-        println!("      global.md");
-        println!("      mcp.md");
-        println!("      testing.md");
-        println!("      vcs.md");
-        println!("    specs/");
+        println!("    custom/");
+        println!("    templates/");
         println!("      spec.md");
-        println!("      mission.md");
         println!("      change/");
         println!("        proposal.md");
         println!("        tasks.md");
@@ -589,6 +632,238 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
+    // ==========================================================================
+    // Markdown Linting Functions (Task 7.1)
+    // ==========================================================================
+
+    /// Validates markdown content for common formatting issues.
+    /// Returns Ok(()) if valid, Err with description if invalid.
+    fn validate_markdown(content: &str) -> std::result::Result<(), String> {
+        validate_heading_hierarchy(content)?;
+        validate_markdown_tables(content)?;
+        validate_code_fences(content)?;
+        Ok(())
+    }
+
+    /// Validates heading hierarchy (h1 -> h2 -> h3, no skipping levels).
+    /// First heading can be at any level; subsequent headings must not skip levels.
+    fn validate_heading_hierarchy(content: &str) -> std::result::Result<(), String> {
+        let mut current_level = 0;
+        let mut in_code_block = false;
+        let mut fence_char = ' ';
+        let mut fence_count = 0;
+
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim_start();
+
+            // Track code block state to skip headings inside them
+            if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+                let c = trimmed.chars().next().unwrap();
+                let count = trimmed.chars().take_while(|&ch| ch == c).count();
+
+                if !in_code_block {
+                    in_code_block = true;
+                    fence_char = c;
+                    fence_count = count;
+                } else if c == fence_char && count >= fence_count {
+                    in_code_block = false;
+                }
+                continue;
+            }
+
+            // Skip headings inside code blocks
+            if in_code_block {
+                continue;
+            }
+
+            // Check for heading (must start with # followed by space or end of line)
+            if trimmed.starts_with('#') {
+                let level = trimmed.chars().take_while(|&c| c == '#').count();
+                // Valid heading: has space after hashes or is just hashes
+                let after_hashes = &trimmed[level..];
+                if level > 0
+                    && level <= 6
+                    && (after_hashes.is_empty() || after_hashes.starts_with(' '))
+                {
+                    // First heading can be any level
+                    if current_level > 0 && level > current_level + 1 {
+                        return Err(format!(
+                            "Line {}: Heading level skipped from h{} to h{}",
+                            line_num + 1,
+                            current_level,
+                            level
+                        ));
+                    }
+                    current_level = level;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates markdown table formatting.
+    /// Checks: separator row format, consistent column count across rows.
+    fn validate_markdown_tables(content: &str) -> std::result::Result<(), String> {
+        let mut in_code_block = false;
+        let mut fence_char = ' ';
+        let mut fence_count = 0;
+
+        let lines: Vec<&str> = content.lines().collect();
+        let mut i = 0;
+
+        while i < lines.len() {
+            let trimmed = lines[i].trim();
+
+            // Track code block state
+            if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+                let c = trimmed.chars().next().unwrap();
+                let count = trimmed.chars().take_while(|&ch| ch == c).count();
+
+                if !in_code_block {
+                    in_code_block = true;
+                    fence_char = c;
+                    fence_count = count;
+                } else if c == fence_char && count >= fence_count {
+                    in_code_block = false;
+                }
+                i += 1;
+                continue;
+            }
+
+            // Skip content inside code blocks
+            if in_code_block {
+                i += 1;
+                continue;
+            }
+
+            // Detect potential table header (line with pipes)
+            if trimmed.starts_with('|') && trimmed.ends_with('|') {
+                let header_cols = count_table_columns(trimmed);
+
+                // Check for separator row on next line
+                if i + 1 < lines.len() {
+                    let next_line = lines[i + 1].trim();
+                    if is_table_separator(next_line) {
+                        let sep_cols = count_table_columns(next_line);
+                        if sep_cols != header_cols {
+                            return Err(format!(
+                                "Line {}: Table separator has {} columns, but header has {}",
+                                i + 2,
+                                sep_cols,
+                                header_cols
+                            ));
+                        }
+
+                        // Validate data rows
+                        let mut j = i + 2;
+                        while j < lines.len() {
+                            let row = lines[j].trim();
+                            if row.is_empty() || !row.starts_with('|') {
+                                break;
+                            }
+                            let row_cols = count_table_columns(row);
+                            if row_cols != header_cols {
+                                return Err(format!(
+                                    "Line {}: Table row has {} columns, but header has {}",
+                                    j + 1,
+                                    row_cols,
+                                    header_cols
+                                ));
+                            }
+                            j += 1;
+                        }
+                        i = j;
+                        continue;
+                    } else if next_line.starts_with('|') {
+                        // Has a second row but it's not a separator
+                        return Err(format!(
+                            "Line {}: Table missing separator row (expected |---|...)",
+                            i + 2
+                        ));
+                    }
+                }
+            }
+
+            i += 1;
+        }
+
+        Ok(())
+    }
+
+    /// Counts the number of columns in a table row.
+    /// Handles escaped pipes (\|) within cells.
+    fn count_table_columns(row: &str) -> usize {
+        let trimmed = row.trim();
+        if trimmed.is_empty() {
+            return 0;
+        }
+        // Count unescaped pipes: a pipe not preceded by backslash
+        let mut count = 0;
+        let chars: Vec<char> = trimmed.chars().collect();
+        for i in 0..chars.len() {
+            if chars[i] == '|' {
+                // Check if this pipe is escaped (preceded by backslash)
+                let is_escaped = i > 0 && chars[i - 1] == '\\';
+                if !is_escaped {
+                    count += 1;
+                }
+            }
+        }
+        // Subtract 1 for leading and trailing pipe
+        if count >= 2 {
+            count - 1
+        } else {
+            count
+        }
+    }
+
+    /// Checks if a line is a valid table separator row.
+    fn is_table_separator(line: &str) -> bool {
+        let trimmed = line.trim();
+        if !trimmed.starts_with('|') || !trimmed.ends_with('|') {
+            return false;
+        }
+        // Check that it contains only |, -, :, and spaces
+        trimmed
+            .chars()
+            .all(|c| c == '|' || c == '-' || c == ':' || c == ' ')
+            && trimmed.contains('-')
+    }
+
+    /// Validates code fences have matching opening/closing.
+    fn validate_code_fences(content: &str) -> std::result::Result<(), String> {
+        let mut in_code_block = false;
+        let mut fence_char = ' ';
+        let mut fence_count = 0;
+        let mut open_line = 0;
+
+        for (line_num, line) in content.lines().enumerate() {
+            let trimmed = line.trim_start();
+
+            if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+                let c = trimmed.chars().next().unwrap();
+                let count = trimmed.chars().take_while(|&ch| ch == c).count();
+
+                if !in_code_block {
+                    in_code_block = true;
+                    fence_char = c;
+                    fence_count = count;
+                    open_line = line_num + 1;
+                } else if c == fence_char && count >= fence_count {
+                    in_code_block = false;
+                }
+            }
+        }
+
+        if in_code_block {
+            return Err(format!(
+                "Unclosed code fence starting at line {}",
+                open_line
+            ));
+        }
+        Ok(())
+    }
+
     #[test]
     fn test_init_creates_spox_directory() {
         let temp = TempDir::new().unwrap();
@@ -596,33 +871,16 @@ mod tests {
         assert!(result.is_ok());
         assert!(temp.path().join(".spox").exists());
         assert!(temp.path().join(".spox/config.toml").exists());
-        assert!(temp.path().join(".spox/workflow.md").exists());
-    }
-
-    #[test]
-    fn test_init_creates_standards_directory() {
-        let temp = TempDir::new().unwrap();
-        run(temp.path()).unwrap();
-        let standards = temp.path().join(".spox/standards");
-        assert!(standards.exists());
-        assert!(standards.join("backend.md").exists());
-        assert!(standards.join("coding.md").exists());
-        assert!(standards.join("frontend.md").exists());
-        assert!(standards.join("global.md").exists());
-        assert!(standards.join("mcp.md").exists());
-        assert!(standards.join("testing.md").exists());
-        assert!(standards.join("vcs.md").exists());
     }
 
     #[test]
     fn test_init_creates_specs_templates_directory() {
         let temp = TempDir::new().unwrap();
         run(temp.path()).unwrap();
-        let specs = temp.path().join(".spox/specs");
-        assert!(specs.exists());
-        assert!(specs.join("spec.md").exists());
-        assert!(specs.join("mission.md").exists());
-        let change = specs.join("change");
+        let templates = temp.path().join(".spox/templates");
+        assert!(templates.exists());
+        assert!(templates.join("spec.md").exists());
+        let change = templates.join("change");
         assert!(change.exists());
         assert!(change.join("proposal.md").exists());
         assert!(change.join("tasks.md").exists());
@@ -1031,5 +1289,448 @@ mod tests {
 
         let config = load_or_migrate_config(temp.path()).unwrap();
         assert!(!config.rules.system.is_empty());
+    }
+
+    // ==================== Tests for append_gitignore_rules ====================
+
+    #[test]
+    fn test_append_gitignore_rules_creates_new_file() {
+        let temp = TempDir::new().unwrap();
+        let gitignore_path = temp.path().join(".gitignore");
+
+        append_gitignore_rules(&gitignore_path, "rule1\nrule2\n").unwrap();
+
+        assert!(gitignore_path.exists());
+        let content = fs::read_to_string(&gitignore_path).unwrap();
+        assert!(content.contains("rule1"));
+        assert!(content.contains("rule2"));
+    }
+
+    #[test]
+    fn test_append_gitignore_rules_avoids_duplicates() {
+        let temp = TempDir::new().unwrap();
+        let gitignore_path = temp.path().join(".gitignore");
+
+        // Create existing file with some rules
+        fs::write(&gitignore_path, "existing_rule\n").unwrap();
+
+        // Append rules including the existing one
+        append_gitignore_rules(&gitignore_path, "existing_rule\nnew_rule\n").unwrap();
+
+        let content = fs::read_to_string(&gitignore_path).unwrap();
+        // existing_rule should appear only once
+        assert_eq!(content.matches("existing_rule").count(), 1);
+        // new_rule should be added
+        assert!(content.contains("new_rule"));
+    }
+
+    #[test]
+    fn test_append_gitignore_rules_handles_comments_and_empty_lines() {
+        let temp = TempDir::new().unwrap();
+        let gitignore_path = temp.path().join(".gitignore");
+
+        let template = "# Comment\n\nrule1\nrule2\n";
+        append_gitignore_rules(&gitignore_path, template).unwrap();
+
+        let content = fs::read_to_string(&gitignore_path).unwrap();
+        assert!(content.contains("rule1"));
+        assert!(content.contains("rule2"));
+    }
+
+    #[test]
+    fn test_append_gitignore_rules_appends_to_existing() {
+        let temp = TempDir::new().unwrap();
+        let gitignore_path = temp.path().join(".gitignore");
+
+        // Create existing file
+        fs::write(&gitignore_path, "old_rule\n").unwrap();
+
+        // Append new rules
+        append_gitignore_rules(&gitignore_path, "new_rule\n").unwrap();
+
+        let content = fs::read_to_string(&gitignore_path).unwrap();
+        assert!(content.contains("old_rule"));
+        assert!(content.contains("new_rule"));
+        assert!(content.contains("# Added by spox init"));
+    }
+
+    #[test]
+    fn test_init_creates_spox_gitignore() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+        let gitignore = temp.path().join(".spox/.gitignore");
+        assert!(gitignore.exists());
+        let content = fs::read_to_string(&gitignore).unwrap();
+        assert!(content.contains("/templates/"));
+    }
+
+    #[test]
+    fn test_init_creates_claude_gitignore() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+        let gitignore = temp.path().join(".claude/.gitignore");
+        assert!(gitignore.exists());
+        let content = fs::read_to_string(&gitignore).unwrap();
+        assert!(content.contains("agents/spox-*.md"));
+    }
+
+    // ==========================================================================
+    // Integration Test: Generated CLAUDE.md Passes Linting (Task 7.2)
+    // ==========================================================================
+
+    #[test]
+    fn test_generated_claude_md_passes_markdown_linting() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        let claude_md = temp.path().join("CLAUDE.md");
+        assert!(claude_md.exists(), "CLAUDE.md should be created");
+
+        let content = fs::read_to_string(&claude_md).unwrap();
+
+        // Validate the generated CLAUDE.md passes all linting rules
+        let result = validate_markdown(&content);
+        assert!(
+            result.is_ok(),
+            "Generated CLAUDE.md should pass markdown linting: {:?}",
+            result.err()
+        );
+    }
+
+    // ==========================================================================
+    // Markdown Linting Tests (Task 7.3)
+    // ==========================================================================
+
+    // --------------------------------------------------------------------------
+    // Heading Hierarchy Tests
+    // --------------------------------------------------------------------------
+
+    #[test]
+    fn test_validate_heading_hierarchy_passes_valid() {
+        let content = r#"# Heading 1
+## Heading 2
+### Heading 3
+## Another H2
+### Another H3
+#### Heading 4
+"#;
+        assert!(validate_heading_hierarchy(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_heading_hierarchy_passes_starting_at_h2() {
+        // It's valid to start at any level
+        let content = r#"## Starting at H2
+### Then H3
+"#;
+        assert!(validate_heading_hierarchy(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_heading_hierarchy_fails_skipped_level() {
+        let content = r#"# Heading 1
+### Skipped H2
+"#;
+        let result = validate_heading_hierarchy(content);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("h1 to h3"),
+            "Error should mention skip: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_heading_hierarchy_fails_multiple_level_skip() {
+        let content = r#"# Heading 1
+## Heading 2
+##### Skipped to H5
+"#;
+        let result = validate_heading_hierarchy(content);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("h2 to h5"),
+            "Error should mention skip: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_heading_hierarchy_ignores_headings_in_code_blocks() {
+        let content = r#"# Real H1
+## Real H2
+
+```markdown
+# This is in a code block
+##### This skip should be ignored
+```
+
+### Real H3
+"#;
+        assert!(validate_heading_hierarchy(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_heading_hierarchy_handles_tilde_code_blocks() {
+        let content = r#"# H1
+## H2
+
+~~~
+# In tilde fence
+##### Skip ignored
+~~~
+
+### H3
+"#;
+        assert!(validate_heading_hierarchy(content).is_ok());
+    }
+
+    // --------------------------------------------------------------------------
+    // Markdown Table Tests
+    // --------------------------------------------------------------------------
+
+    #[test]
+    fn test_validate_markdown_tables_passes_valid() {
+        let content = r#"
+| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |
+| Cell 3   | Cell 4   |
+"#;
+        assert!(validate_markdown_tables(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_markdown_tables_passes_with_alignment() {
+        let content = r#"
+| Left | Center | Right |
+|:-----|:------:|------:|
+| L    |   C    |     R |
+"#;
+        assert!(validate_markdown_tables(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_markdown_tables_fails_inconsistent_columns() {
+        let content = r#"
+| Header 1 | Header 2 | Header 3 |
+|----------|----------|----------|
+| Cell 1   | Cell 2   |
+"#;
+        let result = validate_markdown_tables(content);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("column"),
+            "Error should mention columns: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_markdown_tables_fails_missing_separator() {
+        let content = r#"
+| Header 1 | Header 2 |
+| Cell 1   | Cell 2   |
+"#;
+        let result = validate_markdown_tables(content);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("separator"),
+            "Error should mention separator: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_markdown_tables_ignores_tables_in_code_blocks() {
+        let content = r#"
+```markdown
+| Bad | Table |
+| no separator here
+```
+
+Regular text here.
+"#;
+        assert!(validate_markdown_tables(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_markdown_tables_passes_multiple_valid_tables() {
+        let content = r#"
+| A | B |
+|---|---|
+| 1 | 2 |
+
+Some text between tables.
+
+| X | Y | Z |
+|---|---|---|
+| a | b | c |
+"#;
+        assert!(validate_markdown_tables(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_markdown_tables_handles_escaped_pipes() {
+        // A table cell containing \| should not be counted as a column separator
+        let content = r#"
+| Task | Use | Not |
+|------|-----|-----|
+| Find | foo | `rg "class\|function"` |
+"#;
+        assert!(validate_markdown_tables(content).is_ok());
+    }
+
+    // --------------------------------------------------------------------------
+    // Code Fence Tests
+    // --------------------------------------------------------------------------
+
+    #[test]
+    fn test_validate_code_fences_passes_valid() {
+        let content = r#"
+```rust
+fn main() {}
+```
+"#;
+        assert!(validate_code_fences(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_code_fences_passes_multiple_blocks() {
+        let content = r#"
+```rust
+fn foo() {}
+```
+
+Some text.
+
+```python
+def bar(): pass
+```
+"#;
+        assert!(validate_code_fences(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_code_fences_passes_tilde_fences() {
+        let content = r#"
+~~~bash
+echo "hello"
+~~~
+"#;
+        assert!(validate_code_fences(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_code_fences_fails_unclosed() {
+        let content = r#"
+```rust
+fn main() {}
+"#;
+        let result = validate_code_fences(content);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("nclosed") || err.contains("code fence"),
+            "Error should mention unclosed: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_validate_code_fences_fails_unclosed_tilde() {
+        let content = r#"
+~~~bash
+echo "hello"
+"#;
+        let result = validate_code_fences(content);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_code_fences_handles_nested_backticks() {
+        // A code block with 3 backticks can contain inline code
+        let content = r#"
+```markdown
+Here's some `inline code` with backticks
+```
+"#;
+        assert!(validate_code_fences(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_code_fences_longer_fence_closes() {
+        // A fence opened with ``` can be closed with ```` or more
+        let content = r#"
+```rust
+code
+````
+"#;
+        assert!(validate_code_fences(content).is_ok());
+    }
+
+    // --------------------------------------------------------------------------
+    // Combined validate_markdown Tests
+    // --------------------------------------------------------------------------
+
+    #[test]
+    fn test_validate_markdown_passes_valid_document() {
+        let content = r#"# Title
+
+## Section 1
+
+Some paragraph text.
+
+| Name | Value |
+|------|-------|
+| foo  | bar   |
+
+```rust
+fn main() {}
+```
+
+## Section 2
+
+### Subsection
+
+More text.
+"#;
+        assert!(validate_markdown(content).is_ok());
+    }
+
+    #[test]
+    fn test_validate_markdown_fails_on_heading_error() {
+        let content = r#"# Title
+#### Skipped levels
+"#;
+        let result = validate_markdown(content);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_markdown_fails_on_table_error() {
+        let content = r#"# Title
+
+| A | B | C |
+|---|---|---|
+| 1 | 2 |
+"#;
+        let result = validate_markdown(content);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_markdown_fails_on_code_fence_error() {
+        let content = r#"# Title
+
+```rust
+unclosed
+"#;
+        let result = validate_markdown(content);
+        assert!(result.is_err());
     }
 }

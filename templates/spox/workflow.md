@@ -18,9 +18,7 @@ This separation keeps diffs explicit and makes multi-spec updates manageable.
 
 **Template for specs:**
 
-Use this template for spec documents for the current truth: `.spox/specs/spec.md`
-
-```markdown
+Use this template for spec documents for the current truth: `.spox/templates/spec.md`
 
 ## Commands
 
@@ -30,7 +28,7 @@ Use the `spox` CLI to list, view, and validate specs and changes:
 spox config show              # Paths (authoritative—use these, not defaults)
 spox spec list                # Current specifications
 spox spec show <id>           # View a spec
-spox change list              # Active change proposals  
+spox change list              # Active change proposals
 spox change show <id>         # View a change (add --deltas-only to debug)
 spox change validate          # Validate before requesting approval
 spox spec validate            # Validate after archiving
@@ -87,10 +85,12 @@ New request?
 **File templates:**
 
 Use these templates for scaffolding:
-* `.spox/specs/change/proposal.md`
-* `.spox/specs/change/tasks.md`
-* `.spox/specs/change/design.md` (if needed)
-* `.spox/specs/change/spec.md`
+* `.spox/templates/change/proposal.md`
+* `.spox/templates/change/tasks.md`
+* `.spox/templates/change/design.md` (if needed)
+* `.spox/templates/change/spec.md`
+
+**Note:** Templates are bundled in the `spox` binary. View them with `spox template show <name>` (coming soon).
 
 ### Write Delta Specs
 
