@@ -2,52 +2,31 @@
 
 ### Git Guardrails
 
-- **You may READ git state, but you must NEVER WRITE to git.**
-- Writing to Git is fully controlled by the user.
+**READ ONLY.** You may inspect git state. You must NEVER write to git.
 
-#### Commands
-
-**Allowed Commands** Use the following only to inspect changes, branch, commits, conflicts, and overall repo state:
+#### Allowed (read-only)
 ```bash
-git status              # Check working tree
-git status --short      # Compact status
-git diff                # Unstaged changes
-git diff --staged       # Staged changes
-git diff HEAD~1         # Compare with previous commit
-git log                 # Commit history
-git log --oneline -10   # Recent commits
-git show <commit>       # Commit details
-git branch              # Local branches
-git branch -a           # All branches
-git branch -r           # Remote branches
+git status [--short]    # Working tree state
+git diff [--staged]     # View changes
+git log [--oneline -n]  # Commit history
+git show                # Commit details
+git branch [-a|-r]      # List branches
 ```
 
-**NEVER execute these commands under any circumstances:**
+#### FORBIDDEN — Never Execute
 
-```bash
-git add                 # Staging
-git commit              # Committing
-git push                # Pushing
-git pull                # Pulling
-git fetch               # Fetching
-git merge               # Merging
-git rebase              # Rebasing
-git checkout            # Switching branches/files
-git switch              # Switching branches
-git restore             # Restoring files
-git reset               # Resetting
-git revert              # Reverting
-git stash               # Stashing
-git cherry-pick         # Cherry-picking
-git tag                 # Tagging
-git remote add/remove   # Remote management
-git submodule           # Submodule operations
-```
+**Any command that modifies repository state is prohibited:**
 
-#### Verify status before completing work
+- `git add`, `git commit`, `git push`, `git pull`, `git fetch`
+- `git merge`, `git rebase`, `git cherry-pick`
+- `git checkout`, `git switch`, `git restore`
+- `git reset`, `git revert`
+- `git stash` ← **including stash; do not use**
+- `git tag`, `git remote add/remove`, `git submodule`
 
-**Mandatory** Check git status before marking work complete:
+**No exceptions. No workarounds. User controls all git writes.**
 
+#### Before Completing Work
 ```bash
 git status              # Verify expected files changed
 git diff                # Review actual changes
