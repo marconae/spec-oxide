@@ -3,57 +3,59 @@
 
 ## MCP Tools
 
-Prefer MCP tools over text-based alternatives. MCP tools provide semantic understanding; text tools only match patterns.
+### Rules
+
+**Priority:** Serena (code) → Context7 (docs) → text tools (fallback only)
+
+1. **Serena first** for code navigation, understanding, editing
+2. **Context7 first** for library/API documentation
+3. **Symbolic editing** over read/edit/write cycles
+4. **Check onboarding** before first Serena use on any project
+5. **Text tools** only when MCP tools unavailable
+6. **Never assume** library behavior—verify with Context7
+7. **Never pattern-match** code—use Serena's semantic understanding
 
 ### Serena MCP
 
-**Use for:** Code understanding, code navigation, symbol lookup, reference finding, code analysis.
+Semantic code understanding and editing. **Always prefer over** `rg`, `grep`, `find`, `ag`, `ast-grep`, or
+read/edit/write cycles.
 
-**Prefer over:** `rg`, `grep`, `find`, `ag`, `ast-grep`, or any text-based search.
+#### Tool Reference
 
-| Task                      | Use Serena                | Not                    |
-|---------------------------|---------------------------|------------------------|
-| Find function definition  | `serena.find_definition`  | `rg "function foo"`    |
-| Find all references       | `serena.find_references`  | `rg "foo("`            |
-| Understand code structure | `serena.get_symbols`      | `rg "class\|function"` |
-| Navigate to symbol        | `serena.go_to_symbol`     | `grep -rn "symbol"`    |
-| Analyze dependencies      | `serena.get_dependencies` | Manual file reading    |
+| Task                   | Use                        | Not                    |
+|------------------------|----------------------------|------------------------|
+| List directory         | `list_dir`                 | `ls`, `find`           |
+| Find files             | `find_file`                | `find`, `rg --files`   |
+| File symbols           | `get_symbols_overview`     | `rg "class\|function"` |
+| Symbol definition      | `find_symbol`              | `rg "function foo"`    |
+| Symbol references      | `find_referencing_symbols` | `rg "foo("`            |
+| Update function body   | `replace_symbol_body`      | read → edit → write    |
+| Add code after symbol  | `insert_after_symbol`      | read → edit → write    |
+| Add code before symbol | `insert_before_symbol`     | read → edit → write    |
+| Rename across codebase | `rename_symbol`            | `rg` + manual edits    |
 
-**Why:** Serena understands code semantically. It knows that `foo()` in file A calls the `foo` defined in file B. Text
-search only finds string matches.
+#### Reflection Tools
+
+- `think_about_collected_information` — after exploration
+- `think_about_task_adherence` — during implementation
+- `think_about_whether_you_are_done` — before completion
+
+#### Workflow
+
+```
+Explore → find_symbol, get_symbols_overview
+Understand → find_referencing_symbols
+Reflect → think_about_collected_information
+Edit → replace_symbol_body, insert_*_symbol
+Verify → find_referencing_symbols
+Check → think_about_whether_you_are_done
+```
 
 ### Context7 MCP
 
-**Use for:** Library documentation, API references, framework guides, package usage.
+Current library docs and API references. **Prefer over** training data, assumptions, or web search for documentation.
 
-**Prefer over:** Training data, assumptions, outdated memory, web search for docs.
-
-| Task                          | Use Context7        | Not                        |
-|-------------------------------|---------------------|----------------------------|
-| Check API signature           | `context7.lookup`   | Assume from training       |
-| Find library examples         | `context7.examples` | Guess syntax               |
-| Verify current behavior       | `context7.docs`     | Rely on outdated knowledge |
-| Understand framework patterns | `context7.guides`   | Web search                 |
-
-**Why:** Training data has a cutoff date. Libraries change. Context7 provides current, accurate documentation. When in
-doubt, verify with Context7.
-
-## Decision Flow
-
-```
-Need to understand code?
-├─ Symbol, reference, or structure → Serena
-├─ Library or API docs → Context7
-└─ Neither available → Fall back to text tools
-```
-
-### Rules
-
-1. **Serena first** for any code navigation or understanding task
-2. **Context7 first** for any library or documentation lookup
-3. **Text tools** only when MCP tools are unavailable or insufficient
-4. **Never assume** library behavior—verify with Context7
-5. **Never pattern-match** code—understand it with Serena
+Use `context7` for: API signatures, library examples, framework patterns, current behavior verification.
 
 ## General mindset
 
@@ -430,52 +432,31 @@ db.query(f"SELECT * FROM users WHERE id = {user_id}")
 
 ### Git Guardrails
 
-- **You may READ git state, but you must NEVER WRITE to git.**
-- Writing to Git is fully controlled by the user.
+**READ ONLY.** You may inspect git state. You must NEVER write to git.
 
-#### Commands
-
-**Allowed Commands** Use the following only to inspect changes, branch, commits, conflicts, and overall repo state:
+#### Allowed (read-only)
 ```bash
-git status              # Check working tree
-git status --short      # Compact status
-git diff                # Unstaged changes
-git diff --staged       # Staged changes
-git diff HEAD~1         # Compare with previous commit
-git log                 # Commit history
-git log --oneline -10   # Recent commits
-git show <commit>       # Commit details
-git branch              # Local branches
-git branch -a           # All branches
-git branch -r           # Remote branches
+git status [--short]    # Working tree state
+git diff [--staged]     # View changes
+git log [--oneline -n]  # Commit history
+git show                # Commit details
+git branch [-a|-r]      # List branches
 ```
 
-**NEVER execute these commands under any circumstances:**
+#### FORBIDDEN — Never Execute
 
-```bash
-git add                 # Staging
-git commit              # Committing
-git push                # Pushing
-git pull                # Pulling
-git fetch               # Fetching
-git merge               # Merging
-git rebase              # Rebasing
-git checkout            # Switching branches/files
-git switch              # Switching branches
-git restore             # Restoring files
-git reset               # Resetting
-git revert              # Reverting
-git stash               # Stashing
-git cherry-pick         # Cherry-picking
-git tag                 # Tagging
-git remote add/remove   # Remote management
-git submodule           # Submodule operations
-```
+**Any command that modifies repository state is prohibited:**
 
-#### Verify status before completing work
+- `git add`, `git commit`, `git push`, `git pull`, `git fetch`
+- `git merge`, `git rebase`, `git cherry-pick`
+- `git checkout`, `git switch`, `git restore`
+- `git reset`, `git revert`
+- `git stash` ← **including stash; do not use**
+- `git tag`, `git remote add/remove`, `git submodule`
 
-**Mandatory** Check git status before marking work complete:
+**No exceptions. No workarounds. User controls all git writes.**
 
+#### Before Completing Work
 ```bash
 git status              # Verify expected files changed
 git diff                # Review actual changes
