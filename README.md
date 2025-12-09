@@ -1,258 +1,86 @@
-<p align="center">
-  <img src="assets/spox-logo-light.svg" alt="Spec Oxide" width="250">
+<p align="center" style="background-color: white">
+  <img src="assets/spox-logo-light.svg" alt="Spec Oxide" width="300">
 </p>
 
 # Spec Oxide
 
 > Spec-driven development for humans and AI - optimized for Claude Code.
 
-Spec Oxide is a comprehensive workflow that enables spec-driven development for AI-assisted coding. It excels not only in green-field projects but also in long-living projects by keeping specs up to date through integrating implemented change deltas into an existing repository of specs grouped by capability.
+Spec Oxide is a comprehensive workflow and toolset that enables spec-driven development for AI-assisted coding. You
+agree on *what* to build before any code is written.
 
-The workflow is augmented by the `spox` CLI tool.
+## What do you get?
 
-## Supported Platforms
+### 📋 Spec Driven Workflow with three simple commands
 
-- **Linux** - Fully supported
-- **macOS** - Fully supported
-- **Windows** - Requires [WSL (Windows Subsystem for Linux)](https://learn.microsoft.com/en-us/windows/wsl/install)
+**Core principle:** Specs are the source of truth. Changes are proposals that modify that truth.
 
-## Prerequisites
+* `spox:propose` - Propose a change and lock your intent
+* `spox:implement` - Implement the defined task list with comprehensive verification
+* `spox:archive` - Keep the accepted specs in sync by merging the change proposal
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - AI coding assistant
-- [uv](https://docs.astral.sh/uv/) - Required for Serena MCP server
-- [Node.js 18+](https://nodejs.org/) - Required for Context7 MCP server
+### 🔌 Built-in MCP: agents understand specs and changes
 
-## Installation
+Spec Oxide ships with a built-in MCP server that enables agents to list and search specs.
+
+![Spox Oxide MCP Search](assets/cc-search-spec-mcp.png)
+
+The built-in MCP server is designed to optimize the context window and minimize token waste.
+
+### 📺 Track Specifications and Changes with a simple CLI
+
+Spec Oxide ships with a simple CLI that helps you manage specs and track changes:
+
+![Spox Oxide CLI](assets/cli-show-screenshot.png)
+
+### 🦺 Rules and best-practices preloaded in your context
+
+Spec Oxide maintains an up-to-date `CLAUDE.md` file that includes:
+
+* Proven coding standards for backend, frontend, testing and verification
+* Enforcement of test-driven development and clean code practices
+* Instructions on how to use the built-in MCP server
+
+## 👋 Get started in minutes—no extra API keys required
+
+For setup and update instructions read the [Setup Guide](docs/setup-guide.md). Setup takes just a couple of minutes.
+Besides Claude Code, there are no additional API keys required.
 
 ```bash
-cargo install --path .
-```
+# Setup
+cargo install --git https://github.com/marconae/spec-oxide
 
-## Quick Start
-
-```bash
 # Initialize a new project
 spox init
 
 # Run the setup script to configure MCP servers (Serena, Context7)
 .spox/setup.sh
 
-# View project dashboard (human-friendly, colored output)
-spox show
+# Run Claude Code
+claude
 
-# List and view specs
-spox spec list
-spox spec show auth
-
-# Validate specs and changes
-spox spec validate
-spox change validate
+# Get started with /spox:setup
 ```
 
-The setup script will:
-- Check for required prerequisites (Claude Code, uv, Node.js)
-- Configure Serena MCP for code-aware AI assistance
-- Configure Context7 MCP for documentation lookup
-- Index your project for Serena
+## Next steps
 
-## Commands
+<img src="assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
 
-| Command | Description |
-|---------|-------------|
-| `spox init [--path <path>]` | Initialize a new Spox project |
-| `spox show` | Show project dashboard (human use) |
-| `spox config show` | Display project configuration |
-| `spox spec list` | List all specs with requirement counts |
-| `spox spec show <id>` | Show a spec's purpose and requirements |
-| `spox spec validate [<id>] [--strict]` | Validate spec structure |
-| `spox change list` | List active changes with task progress |
-| `spox change show <id> [--deltas-only]` | Show a change proposal |
-| `spox change validate [<id>] [--strict]` | Validate change structure |
+1. **Read the workflow** — Understand [Propose → Implement → Archive](user-guide.md#workflow)
+2. **Edit your mission** — Run `/spox:setup` and define your `specs/mission.md` for your project
+3. **Create your first proposal** — Run `/spox:propose` with a real task
+4. **Implement your first proposal**  — Run `/spox:implement` and start shipping
+   5**Explore the CLI** — See all commands with `spox --help`
 
-### Command Details
-
-#### `spox init`
-
-Creates the project structure:
-
-```
-.spox/
-  config.toml           # Project configuration
-  workflow.md           # Workflow documentation
-  standards/            # Coding standards
-  specs/                # Spec templates
-.claude/
-  agents/               # AI agent templates
-  commands/spox/        # Slash commands
-specs/
-  mission.md            # Project mission
-  _changes/             # Active change proposals
-  _archive/             # Archived changes
-```
-
-#### `spox show`
-
-Displays a human-friendly dashboard with:
-- List of specs with requirement counts
-- Active changes with task progress bars
-- Delta summaries per change
-
-Note: This command produces colored output for terminal viewing. AI agents should use `spox spec list` and `spox change list` instead.
-
-#### `spox spec list` / `spox change list`
-
-Lists specs or changes in a compact, AI-friendly format (no colors):
-
-```
-Specs:
-- auth    2 requirements
-- config  1 requirement
-```
-
-```
-Changes:
-- add-feature  2/4 tasks
-- fix-bug      0/2 tasks
-```
-
-#### `spox spec show <id>`
-
-Displays a spec with:
-- Purpose section
-- Requirements with descriptions
-- Scenarios for each requirement
-
-#### `spox change show <id>`
-
-Displays a change proposal with:
-- Why section (motivation)
-- What Changes section
-- Task progress bar
-- Delta requirements grouped by capability
-
-Use `--deltas-only` to show only the delta requirements.
-
-#### `spox spec validate` / `spox change validate`
-
-Validates structure and content:
-- Checks required sections (Purpose, Requirements, Why, What Changes)
-- Verifies scenario format (WHEN/THEN clauses)
-- Reports errors and warnings
-- Use `--strict` to treat warnings as errors
-
-## Workflow
-
-Spec Oxide follows a three-stage workflow:
-
-### Stage 1: Propose
-
-Use `/spox:propose` to scaffold a new change proposal in `specs/_changes/<change-id>/`:
-
-```
-specs/_changes/add-feature/
-  proposal.md           # Why and what changes
-  tasks.md              # Implementation checklist
-  design.md             # Technical decisions (optional)
-  specs/
-    <capability>/
-      spec.md           # Delta requirements
-```
-
-Delta format:
-```markdown
-## ADDED|MODIFIED|REMOVED|RENAMED Requirements
-
-### Requirement: Name
-Description using SHALL/MUST.
-
-#### Scenario: Description
-- **WHEN** condition
-- **THEN** outcome
-```
-
-### Stage 2: Implement
-
-Use `/spox:implement` to execute the approved change. Complete tasks from `tasks.md`, mark them as done, and verify the implementation.
-
-### Stage 3: Archive
-
-Use `/spox:archive` to finalize a deployed change. Move the change to `specs/_archive/YYYY-MM-DD-<id>/` and apply deltas to the main specs.
-
-## Claude Code Integration
-
-Spec Oxide includes templates for Claude Code AI assistance.
-
-### Agents
-
-| Agent | Description |
-|-------|-------------|
-| `spox-implementer` | Implements features by following tasks.md |
-| `spox-reviewer` | Performs code quality review |
-| `spox-verifier` | Verifies implementation against specs |
-
-## Directory Structure
-
-```
-project/
-├── .spox/
-│   ├── config.toml         # Configuration (spec_folder, changes_folder, archive_folder)
-│   ├── workflow.md         # Workflow reference
-│   ├── standards/          # Coding standards
-│   └── specs/              # Templates
-├── .claude/
-│   ├── agents/
-│   │   ├── spox-implementer.md
-│   │   ├── spox-reviewer.md
-│   │   └── spox-verifier.md
-│   └── commands/spox/
-│       ├── propose.md
-│       ├── implement.md
-│       └── archive.md
-└── specs/
-    ├── mission.md          # Project mission statement
-    ├── <capability>/
-    │   └── spec.md         # Capability specification
-    ├── _changes/           # Active change proposals
-    │   └── <change-id>/
-    │       ├── proposal.md
-    │       ├── tasks.md
-    │       ├── design.md   # Optional
-    │       └── specs/
-    │           └── <capability>/
-    │               └── spec.md
-    └── _archive/           # Archived changes
-        └── YYYY-MM-DD-<id>/
-```
-
-## Configuration
-
-The `.spox/config.toml` file contains:
-
-```toml
-spec_folder = "specs"
-changes_folder = "specs/_changes"
-archive_folder = "specs/_archive"
-```
-
-Use `spox config show` to display current configuration.
-
-## Validation Rules
-
-### Spec Validation
-
-- Must have `## Purpose` section (warning if < 50 characters)
-- Must have `## Requirements` section
-- Requirements must use normative language (SHALL/MUST)
-- Requirements must have at least one scenario
-- Scenarios must have WHEN and THEN clauses
-
-### Change Validation
-
-- Must have `proposal.md` with `## Why` and `## What Changes` sections
-- Must have `tasks.md` with checkbox items
-- Must have at least one delta spec
-- Delta specs must use valid headers (ADDED, MODIFIED, REMOVED, RENAMED)
+Ready to dive deeper? See the full [User Guide](user-guide.md).
 
 ## License
 
 See LICENSE file.
+
+## Acknowledgements
+
+Built with ❤️ and Rust!
+
+- **[buildermethods/agent-os](https://github.com/buildermethods/agent-os)** - CC Spec-Driven inspiration
+- **[maxritter/claude-codepro](https://github.com/maxritter/claude-codepro)** - CC Spec-Driven inspiration
