@@ -573,7 +573,7 @@ No tasks here yet.
         let warnings: Vec<_> = report
             .issues
             .iter()
-            .filter(|i| i.severity == super::super::Severity::Warning)
+            .filter(|i| i.severity == crate::core::validate::Severity::Warning)
             .collect();
         assert_eq!(warnings.len(), 3);
         assert!(warnings
@@ -654,7 +654,7 @@ No tasks here yet.
         let infos: Vec<_> = report
             .issues
             .iter()
-            .filter(|i| i.severity == super::super::Severity::Info)
+            .filter(|i| i.severity == crate::core::validate::Severity::Info)
             .collect();
         assert!(infos
             .iter()
@@ -675,7 +675,7 @@ No tasks here yet.
         let infos: Vec<_> = report
             .issues
             .iter()
-            .filter(|i| i.severity == super::super::Severity::Info)
+            .filter(|i| i.severity == crate::core::validate::Severity::Info)
             .collect();
         assert!(infos.is_empty());
     }
@@ -692,7 +692,7 @@ No tasks here yet.
         let warnings: Vec<_> = report
             .issues
             .iter()
-            .filter(|i| i.severity == super::super::Severity::Warning)
+            .filter(|i| i.severity == crate::core::validate::Severity::Warning)
             .collect();
         assert_eq!(warnings.len(), 1);
         assert!(warnings[0].message.contains("..."));

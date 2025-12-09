@@ -1,16 +1,22 @@
-mod cli;
 mod config;
 mod config_cmd;
+mod core;
 mod error;
+mod index_cmd;
 mod init;
 mod list_cmd;
+mod mcp;
+mod mcp_cmd;
 mod show;
 mod show_cmd;
 mod validate;
 mod validate_cmd;
 
+// cli module is now under src/cli/
+mod cli;
+
 use clap::Parser;
-use cli::{ChangeCommands, Cli, Commands, ConfigCommands, SpecCommands};
+use cli::{ChangeCommands, Cli, Commands, ConfigCommands, McpCommands, SpecCommands};
 use std::path::PathBuf;
 
 fn main() {
@@ -54,6 +60,10 @@ fn run(cmd: Commands) -> error::Result<()> {
         },
         Commands::Config(action) => match action {
             ConfigCommands::Show { paths } => config_cmd::run_show(paths),
+        },
+        Commands::Index => index_cmd::run(),
+        Commands::Mcp(action) => match action {
+            McpCommands::Serve => mcp_cmd::serve(),
         },
     }
 }

@@ -1,3 +1,8 @@
+//! CLI argument parsing with clap.
+//!
+//! This module defines the command structure for the `spox` CLI tool
+//! using clap's derive macros.
+
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -34,6 +39,13 @@ pub enum Commands {
     /// Manage configuration
     #[command(subcommand)]
     Config(ConfigCommands),
+
+    /// Build semantic search index
+    Index,
+
+    /// MCP server operations
+    #[command(subcommand)]
+    Mcp(McpCommands),
 }
 
 #[derive(Subcommand, Debug)]
@@ -101,4 +113,10 @@ pub enum ConfigCommands {
         #[arg(long)]
         paths: bool,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum McpCommands {
+    /// Start MCP server over stdio
+    Serve,
 }

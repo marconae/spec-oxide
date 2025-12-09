@@ -87,10 +87,12 @@ mod tests {
 
         // Run the command - should fail since no config exists
         let result = run_show(false);
-        assert!(result.is_err());
 
-        // Restore original directory
-        env::set_current_dir(original_dir).unwrap();
+        // Restore original directory before assertions to avoid leaving cwd in temp dir
+        let restore_result = env::set_current_dir(&original_dir);
+
+        assert!(result.is_err());
+        restore_result.unwrap();
     }
 
     #[test]
@@ -116,10 +118,12 @@ system = ["mcp"]
 
         // Run the command - should succeed
         let result = run_show(false);
-        assert!(result.is_ok());
 
-        // Restore original directory
-        env::set_current_dir(original_dir).unwrap();
+        // Restore original directory before assertions to avoid leaving cwd in temp dir
+        let restore_result = env::set_current_dir(&original_dir);
+
+        assert!(result.is_ok());
+        restore_result.unwrap();
     }
 
     #[test]
@@ -146,10 +150,12 @@ custom = ["my-rules.md"]
 
         // Run the command with paths_only=true - should succeed
         let result = run_show(true);
-        assert!(result.is_ok());
 
-        // Restore original directory
-        env::set_current_dir(original_dir).unwrap();
+        // Restore original directory before assertions to avoid leaving cwd in temp dir
+        let restore_result = env::set_current_dir(&original_dir);
+
+        assert!(result.is_ok());
+        restore_result.unwrap();
     }
 
     #[test]
@@ -176,10 +182,12 @@ custom = ["project-rules.md", "team-rules.md"]
 
         // Run the command - should succeed
         let result = run_show(false);
-        assert!(result.is_ok());
 
-        // Restore original directory
-        env::set_current_dir(original_dir).unwrap();
+        // Restore original directory before assertions to avoid leaving cwd in temp dir
+        let restore_result = env::set_current_dir(&original_dir);
+
+        assert!(result.is_ok());
+        restore_result.unwrap();
     }
 
     #[test]
@@ -205,10 +213,12 @@ system = []
 
         // Run the command - should fail due to validation
         let result = run_show(false);
-        assert!(result.is_err());
 
-        // Restore original directory
-        env::set_current_dir(original_dir).unwrap();
+        // Restore original directory before any assertions to avoid leaving cwd in temp dir
+        let restore_result = env::set_current_dir(&original_dir);
+
+        assert!(result.is_err());
+        restore_result.unwrap();
     }
 
     #[test]
@@ -234,9 +244,11 @@ system = ["mcp", "invalid-template"]
 
         // Run the command - should fail due to validation
         let result = run_show(false);
-        assert!(result.is_err());
 
-        // Restore original directory
-        env::set_current_dir(original_dir).unwrap();
+        // Restore original directory before any assertions to avoid leaving cwd in temp dir
+        let restore_result = env::set_current_dir(&original_dir);
+
+        assert!(result.is_err());
+        restore_result.unwrap();
     }
 }

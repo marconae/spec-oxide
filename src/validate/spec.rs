@@ -334,7 +334,7 @@ fn validate_scenario(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::validate::Severity;
+    use crate::core::validate::Severity;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
