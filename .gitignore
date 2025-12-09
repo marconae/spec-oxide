@@ -26,3 +26,4 @@ target
 
 # Project specific
 .ideas
+.fastembed_cache/
