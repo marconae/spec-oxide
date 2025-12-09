@@ -8,7 +8,6 @@
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(cargo:*)",
-      "Bash(openspec:*)",
       "Bash(spox:*)",
       "Bash(xargs:*)",
       "Bash(nm:*)",
@@ -23,6 +22,7 @@
   "fileExclusions": [
     "target/**",
     ".serena/**",
+    ".fastembed_cache/**",
     ".git/**"
   ]
 }
