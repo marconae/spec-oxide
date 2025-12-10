@@ -66,7 +66,7 @@ claude
 
 <img src="assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
 
-1. **Read the workflow** — Understand [Propose → Implement → Archive](user-guide.md#workflow)
+1. **Read the workflow** — Understand [Propose → Implement → Archive](docs/user-guide.md#workflow)
 2. **Edit your mission** — Run `/spox:setup` and define your `specs/mission.md` for your project
 3. **Create your first proposal** — Run `/spox:propose` with a real task
 4. **Implement your first proposal**  — Run `/spox:implement` and start shipping
