@@ -1,5 +1,5 @@
 <p align="center" style="background-color: white">
-  <img src="assets/spox-logo-light.svg" alt="Spec Oxide" width="300">
+  <img src="docs/assets/spox-logo-light.svg" alt="Spec Oxide" width="300">
 </p>
 
 # Spec Oxide
@@ -23,7 +23,7 @@ agree on *what* to build before any code is written.
 
 Spec Oxide ships with a built-in MCP server that enables agents to list and search specs.
 
-![Spox Oxide MCP Search](assets/cc-search-spec-mcp.png)
+![Spox Oxide MCP Search](docs/assets/cc-search-spec-mcp.png)
 
 The built-in MCP server is designed to optimize the context window and minimize token waste.
 
@@ -31,7 +31,7 @@ The built-in MCP server is designed to optimize the context window and minimize 
 
 Spec Oxide ships with a simple CLI that helps you manage specs and track changes:
 
-![Spox Oxide CLI](assets/cli-show-screenshot.png)
+![Spox Oxide CLI](docs/assets/cli-show-screenshot.png)
 
 ### 🦺 Rules and best-practices preloaded in your context
 
@@ -64,7 +64,7 @@ claude
 
 ## Next steps
 
-<img src="assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
+<img src="docs/assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
 
 1. **Read the workflow** — Understand [Propose → Implement → Archive](docs/user-guide.md#workflow)
 2. **Edit your mission** — Run `/spox:setup` and define your `specs/mission.md` for your project
@@ -72,7 +72,7 @@ claude
 4. **Implement your first proposal**  — Run `/spox:implement` and start shipping
    5**Explore the CLI** — See all commands with `spox --help`
 
-Ready to dive deeper? See the full [User Guide](user-guide.md).
+Ready to dive deeper? See the full [User Guide](docs/user-guide.md).
 
 ## License
 
@@ -84,3 +84,5 @@ Built with ❤️ and Rust!
 
 - **[buildermethods/agent-os](https://github.com/buildermethods/agent-os)** - CC Spec-Driven inspiration
 - **[maxritter/claude-codepro](https://github.com/maxritter/claude-codepro)** - CC Spec-Driven inspiration
+- **[oraios/serena](https://github.com/oraios/serena)** - MCP for code comprehension
+- **[context7/context7](https://github.com/context7/context7)** - MCP for up-to-date docs for external libraries
