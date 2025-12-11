@@ -127,8 +127,8 @@ Add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.).
 
 ### MCP servers not working
 
-1. Verify Claude Code is installed: `claude --version`
-2. Check MCP configuration: `claude mcp list`
+1. Verify `.mcp.json` exists and is valid: `cat .mcp.json | jq`
+2. Verify jq is installed: `jq --version`
 3. Re-run setup: `.spox/setup.sh`
 
 ### Serena not finding symbols
