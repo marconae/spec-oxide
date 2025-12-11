@@ -42,6 +42,7 @@ const TEMPLATE_CMD_ARCHIVE_MD: &str = include_str!("../templates/claude/commands
 const TEMPLATE_CMD_IMPLEMENT_MD: &str =
     include_str!("../templates/claude/commands/spox/implement.md");
 const TEMPLATE_CMD_PROPOSE_MD: &str = include_str!("../templates/claude/commands/spox/propose.md");
+const TEMPLATE_CMD_SETUP_MD: &str = include_str!("../templates/claude/commands/spox/setup.md");
 const TEMPLATE_CMD_VIBE_MD: &str = include_str!("../templates/claude/commands/spox/vibe.md");
 
 // specs/ templates
@@ -83,6 +84,7 @@ const TEMPLATE_CLAUDE_GITIGNORE: &str = include_str!("../templates/claude/gitign
 /// |       |-- archive.md
 /// |       |-- implement.md
 /// |       |-- propose.md
+/// |       |-- setup.md
 /// |       +-- vibe.md
 /// +-- specs/
 /// |   |-- mission.md
@@ -201,6 +203,7 @@ fn create_claude_dir(base_path: &Path) -> Result<()> {
         &commands_spox_dir.join("propose.md"),
         TEMPLATE_CMD_PROPOSE_MD,
     )?;
+    write_file(&commands_spox_dir.join("setup.md"), TEMPLATE_CMD_SETUP_MD)?;
     write_file(&commands_spox_dir.join("vibe.md"), TEMPLATE_CMD_VIBE_MD)?;
 
     Ok(())
@@ -589,6 +592,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("      archive.md");
         println!("      implement.md");
         println!("      propose.md");
+        println!("      setup.md");
         println!("      vibe.md");
         println!("  specs/");
         println!("    mission.md");
@@ -901,6 +905,7 @@ mod tests {
         assert!(claude.join("commands/spox/archive.md").exists());
         assert!(claude.join("commands/spox/implement.md").exists());
         assert!(claude.join("commands/spox/propose.md").exists());
+        assert!(claude.join("commands/spox/setup.md").exists());
         assert!(claude.join("commands/spox/vibe.md").exists());
     }
 

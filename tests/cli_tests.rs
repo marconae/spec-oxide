@@ -535,7 +535,7 @@ fn test_init_verifies_all_files_copied_correctly() {
         .join(".claude/agents/spox-verifier.md")
         .exists());
 
-    // .claude/commands/spox/ files (3 files)
+    // .claude/commands/spox/ files (5 files)
     assert!(temp_dir
         .path()
         .join(".claude/commands/spox/archive.md")
@@ -547,6 +547,14 @@ fn test_init_verifies_all_files_copied_correctly() {
     assert!(temp_dir
         .path()
         .join(".claude/commands/spox/propose.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/commands/spox/setup.md")
+        .exists());
+    assert!(temp_dir
+        .path()
+        .join(".claude/commands/spox/vibe.md")
         .exists());
 
     // specs/ structure
