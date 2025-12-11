@@ -102,7 +102,7 @@ The `spox init` command SHALL copy Claude Code agent and command templates from 
 
 ### Requirement: Environment Setup Script
 
-The `spox init` command SHALL copy an interactive setup script to `.spox/setup.sh` that guides users through MCP server installation. The script supports Linux and macOS; Windows users MUST use WSL.
+The `spox init` command SHALL copy an interactive setup script to `.spox/setup.sh` that guides users through MCP server configuration. The script manages the project-level `.mcp.json` file directly instead of using `claude mcp add` commands. The script supports Linux and macOS; Windows users MUST use WSL.
 
 #### Scenario: Setup script copied on fresh init
 
@@ -110,40 +110,47 @@ The `spox init` command SHALL copy an interactive setup script to `.spox/setup.s
 - **THEN** `.spox/setup.sh` exists with content from `templates/spox/setup.sh`
 - **AND** the file has executable permissions (chmod +x)
 
-#### Scenario: Setup script updated on existing project
+#### Scenario: Setup configures .mcp.json on fresh project
 
-- **WHEN** update runs on existing project
-- **THEN** `.spox/setup.sh` is overwritten with latest template
-- **AND** the file has executable permissions
+- **WHEN** user runs `.spox/setup.sh` on a project without `.mcp.json`
+- **AND** user confirms installation of serena and context7
+- **THEN** `.mcp.json` is created with `mcpServers` containing `spox`, `serena`, and `context7` entries
 
-#### Scenario: Setup script checks prerequisites
+#### Scenario: Setup always updates spox entry
 
-- **WHEN** user runs `.spox/setup.sh`
-- **THEN** the script checks for `claude` command availability
-- **AND** the script checks for `uv` command availability (for Serena)
-- **AND** the script checks for `node` command availability (for Context7)
-- **AND** missing prerequisites are reported with installation guidance
+- **WHEN** user runs `.spox/setup.sh` on a project with existing `.mcp.json`
+- **THEN** the `spox` MCP entry is added or updated to the latest configuration
+- **AND** Claude Code will discover the spox MCP server on next startup
 
-#### Scenario: Setup script installs Serena MCP interactively
+#### Scenario: Setup preserves existing serena configuration
 
-- **WHEN** user runs `.spox/setup.sh` and Serena is not configured
-- **THEN** the script asks user for confirmation before installing
-- **AND** if confirmed, runs the Serena MCP installation command
-- **AND** if declined, skips Serena installation with informational message
+- **WHEN** user runs `.spox/setup.sh` on a project with existing `.mcp.json` containing `serena`
+- **THEN** the existing `serena` entry is NOT modified
+- **AND** user is NOT prompted to install serena
 
-#### Scenario: Setup script installs Context7 MCP interactively
+#### Scenario: Setup preserves existing context7 configuration
 
-- **WHEN** user runs `.spox/setup.sh` and Context7 is not configured
-- **THEN** the script asks user for confirmation before installing
-- **AND** if confirmed, runs the Context7 MCP installation command
-- **AND** if declined, skips Context7 installation with informational message
+- **WHEN** user runs `.spox/setup.sh` on a project with existing `.mcp.json` containing `context7`
+- **THEN** the existing `context7` entry is NOT modified
+- **AND** user is NOT prompted to install context7
 
-#### Scenario: Setup script indexes project with Serena
+#### Scenario: Setup adds missing serena on user confirmation
 
-- **WHEN** Serena MCP installation completes successfully
-- **THEN** the script asks user for confirmation to index the project
-- **AND** if confirmed, runs `uvx --from git+https://github.com/oraios/serena serena project index`
-- **AND** provides feedback on indexing progress
+- **WHEN** user runs `.spox/setup.sh` on a project with existing `.mcp.json` NOT containing `serena`
+- **AND** user confirms serena installation
+- **THEN** `serena` entry is added to `.mcp.json`
+
+#### Scenario: Setup adds missing context7 on user confirmation
+
+- **WHEN** user runs `.spox/setup.sh` on a project with existing `.mcp.json` NOT containing `context7`
+- **AND** user confirms context7 installation
+- **THEN** `context7` entry is added to `.mcp.json`
+
+#### Scenario: Setup requires jq for JSON manipulation
+
+- **WHEN** user runs `.spox/setup.sh` without `jq` installed
+- **THEN** script displays error with `jq` installation instructions
+- **AND** script exits without modifying `.mcp.json`
 
 ### Requirement: Claude Code Detection
 

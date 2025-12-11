@@ -13,7 +13,7 @@ implementation work.
 **Build exactly what was approved—nothing more, nothing less.**
 
 You are implementing a change that has already been reviewed and approved. The proposal defines what to build; your job
-is to execute the tasks and keep `tasks.md` in sync with reality.
+is to execute the tasks and keep the task list in sync with reality.
 
 The user provides approved change IDs (e.g., `add-two-factor-auth`) either directly in the prompt or as a list. Only
 implement changes that have been explicitly approved.

@@ -3,8 +3,8 @@
 # Spox MCP Setup Script
 # =====================
 #
-# This script helps configure MCP servers (Serena and Context7) for use with
-# Claude Code in a Spox project.
+# This script helps configure MCP servers for use with Claude Code in a Spox project.
+# It manages the .mcp.json file directly, keeping configuration project-scoped.
 #
 # Supported platforms: Linux, macOS
 # Windows users: Run this script in WSL (Windows Subsystem for Linux)
@@ -13,6 +13,10 @@
 #
 # The script is interactive and will ask for confirmation before each step.
 # It is idempotent - safe to run multiple times.
+#
+# Prerequisites:
+#   - jq (for JSON manipulation)
+#   - uv (for Serena MCP, optional)
 #
 
 set -euo pipefail
@@ -59,11 +63,6 @@ print_info() {
 # Check if a command exists in PATH
 command_exists() {
     command -v "$1" >/dev/null 2>&1
-}
-
-# Get Node.js major version number
-get_node_major_version() {
-    node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/'
 }
 
 # Prompt user for yes/no confirmation
@@ -122,17 +121,18 @@ check_platform() {
 # Prerequisite Checks
 # =============================================================================
 
-check_claude_code() {
-    print_header "Checking Claude Code"
+check_jq() {
+    print_header "Checking jq"
 
-    if command_exists claude; then
-        print_success "Claude Code is installed"
+    if command_exists jq; then
+        print_success "jq is installed"
         return 0
     else
-        print_error "Claude Code is not installed"
+        print_error "jq is not installed (required for JSON manipulation)"
         print_info "Install with one of these methods:"
-        echo "    npm install -g @anthropic-ai/claude-code"
-        echo "    curl -fsSL https://claude.ai/install.sh | bash"
+        echo "    macOS:  brew install jq"
+        echo "    Ubuntu: sudo apt-get install jq"
+        echo "    Fedora: sudo dnf install jq"
         return 1
     fi
 }
@@ -151,119 +151,110 @@ check_uv() {
     fi
 }
 
-check_node() {
-    print_header "Checking Node.js (for Context7 MCP)"
+# =============================================================================
+# MCP JSON Configuration Functions
+# =============================================================================
 
-    if command_exists node; then
-        local version
-        version=$(get_node_major_version)
-        if [ "$version" -ge 18 ]; then
-            print_success "Node.js v$version is installed (≥18 required)"
-            return 0
+MCP_JSON_FILE=".mcp.json"
+
+# Check if an MCP server is configured in .mcp.json
+# Returns 0 if configured, 1 if not
+is_mcp_configured() {
+    local name="$1"
+    if [ -f "$MCP_JSON_FILE" ]; then
+        jq -e ".mcpServers.\"$name\"" "$MCP_JSON_FILE" >/dev/null 2>&1
+    else
+        return 1
+    fi
+}
+
+# Get the spox MCP server configuration JSON
+get_spox_config() {
+    cat <<'EOF'
+{"command": "spox", "args": ["mcp", "serve"]}
+EOF
+}
+
+# Get the serena MCP server configuration JSON
+get_serena_config() {
+    cat <<'EOF'
+{"command": "uvx", "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server", "--context", "claude-code", "--project", "."]}
+EOF
+}
+
+# Get the context7 MCP server configuration JSON
+get_context7_config() {
+    cat <<'EOF'
+{"type": "http", "url": "https://mcp.context7.com/mcp"}
+EOF
+}
+
+# Initialize .mcp.json if it doesn't exist
+init_mcp_json() {
+    if [ ! -f "$MCP_JSON_FILE" ]; then
+        echo '{"mcpServers": {}}' > "$MCP_JSON_FILE"
+        print_success "Created $MCP_JSON_FILE"
+    fi
+}
+
+# Add or update an MCP server in .mcp.json
+# Usage: set_mcp_server <name> <config_json>
+set_mcp_server() {
+    local name="$1"
+    local config="$2"
+    local temp_file
+    temp_file=$(mktemp)
+
+    jq --argjson config "$config" ".mcpServers.\"$name\" = \$config" "$MCP_JSON_FILE" > "$temp_file"
+    mv "$temp_file" "$MCP_JSON_FILE"
+}
+
+# Ensure .mcp.json is properly configured
+ensure_mcp_json() {
+    print_header "Configuring .mcp.json"
+
+    # Initialize file if needed
+    init_mcp_json
+
+    # Always add/update spox (ensures latest config)
+    print_info "Configuring spox MCP server..."
+    set_mcp_server "spox" "$(get_spox_config)"
+    print_success "spox MCP configured"
+
+    # Add serena if not present (with confirmation)
+    if ! is_mcp_configured "serena"; then
+        echo ""
+        print_info "Serena provides semantic code navigation and understanding."
+        if confirm "Add Serena MCP to configuration?"; then
+            set_mcp_server "serena" "$(get_serena_config)"
+            print_success "serena MCP configured"
         else
-            print_warning "Node.js v$version is too old (v18+ required)"
-            print_info "Update Node.js: https://nodejs.org/"
-            return 1
+            print_warning "Skipping Serena MCP configuration"
+            print_info "You can add it later by running this script again."
         fi
     else
-        print_warning "Node.js is not installed (required for Context7 MCP)"
-        print_info "Install from: https://nodejs.org/"
-        return 1
+        print_success "serena MCP already configured (unchanged)"
+    fi
+
+    # Add context7 if not present (with confirmation)
+    if ! is_mcp_configured "context7"; then
+        echo ""
+        print_info "Context7 provides up-to-date library documentation."
+        if confirm "Add Context7 MCP to configuration?"; then
+            set_mcp_server "context7" "$(get_context7_config)"
+            print_success "context7 MCP configured"
+        else
+            print_warning "Skipping Context7 MCP configuration"
+            print_info "You can add it later by running this script again."
+        fi
+    else
+        print_success "context7 MCP already configured (unchanged)"
     fi
 }
 
 # =============================================================================
-# MCP Installation Functions
+# Serena Project Indexing
 # =============================================================================
-
-# Check if an MCP server is already configured
-# Returns 0 if installed, 1 if not
-is_mcp_installed() {
-    local name="$1"
-    claude mcp list 2>/dev/null | grep -q "^$name\$" || \
-    claude mcp list 2>/dev/null | grep -q "^$name " || \
-    claude mcp list 2>/dev/null | grep -q " $name\$" || \
-    claude mcp list 2>/dev/null | grep -q " $name "
-}
-
-install_serena_mcp() {
-    print_header "Serena MCP Installation"
-
-    # Check if already installed (idempotency)
-    if is_mcp_installed "serena"; then
-        print_success "Serena MCP is already installed"
-        return 0
-    fi
-
-    print_info "Serena provides semantic code navigation and understanding."
-    print_info "It will be configured for this project directory."
-    echo ""
-
-    if ! confirm "Install Serena MCP?"; then
-        print_warning "Skipping Serena MCP installation"
-        print_info "You can install it later by running this script again."
-        return 1
-    fi
-
-    print_info "Installing Serena MCP..."
-
-    local output
-    output=$(claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide-assistant --project "$(pwd)" 2>&1)
-    local exit_code=$?
-
-    # Check for "already exists" message (idempotency)
-    if echo "$output" | grep -q "already exists"; then
-        print_success "Serena MCP is already installed"
-        return 0
-    elif [ $exit_code -eq 0 ]; then
-        print_success "Serena MCP installed successfully"
-        return 0
-    else
-        print_error "Failed to install Serena MCP"
-        print_info "Error: $output"
-        print_info "You may need to install it manually. See: https://github.com/oraios/serena"
-        return 1
-    fi
-}
-
-install_context7_mcp() {
-    print_header "Context7 MCP Installation"
-
-    # Check if already installed (idempotency)
-    if is_mcp_installed "context7"; then
-        print_success "Context7 MCP is already installed"
-        return 0
-    fi
-
-    print_info "Context7 provides up-to-date library documentation."
-    echo ""
-
-    if ! confirm "Install Context7 MCP?"; then
-        print_warning "Skipping Context7 MCP installation"
-        print_info "You can install it later by running this script again."
-        return 1
-    fi
-
-    print_info "Installing Context7 MCP..."
-
-    local output
-    output=$(claude mcp add --transport http context7 https://mcp.context7.com/mcp 2>&1)
-    local exit_code=$?
-
-    # Check for "already exists" message (idempotency)
-    if echo "$output" | grep -q "already exists"; then
-        print_success "Context7 MCP is already installed"
-        return 0
-    elif [ $exit_code -eq 0 ]; then
-        print_success "Context7 MCP installed successfully"
-        return 0
-    else
-        print_error "Failed to install Context7 MCP"
-        print_info "Error: $output"
-        print_info "You may need to install it manually. See: https://context7.com/docs/installation"
-        return 1
-    fi
-}
 
 index_project_with_serena() {
     print_header "Serena Project Indexing"
@@ -301,72 +292,37 @@ main() {
     echo -e "${BOLD}${CYAN}╚═══════════════════════════════════════╝${NC}"
     echo ""
     print_info "This script will help you configure MCP servers for Claude Code."
-    print_info "You will be prompted before each installation step."
+    print_info "Configuration is stored in .mcp.json (project-scoped)."
 
     # Check platform compatibility
     check_platform
 
-    # Track prerequisites status
-    local has_claude=false
-    local has_uv=false
-    local has_node=false
-
-    # Check all prerequisites
-    if check_claude_code; then
-        has_claude=true
+    # Check required prerequisite
+    if ! check_jq; then
+        print_error "jq is required but not installed."
+        print_info "Install jq first, then run this script again."
+        exit 1
     fi
 
+    # Check optional prerequisites
+    local has_uv=false
     if check_uv; then
         has_uv=true
-    fi
-
-    if check_node; then
-        has_node=true
     fi
 
     # Summary of prerequisites
     print_header "Prerequisites Summary"
 
-    if [ "$has_claude" = false ]; then
-        print_error "Claude Code is required but not installed."
-        print_info "Install Claude Code first, then run this script again."
-        exit 1
-    fi
-
-    local can_install_serena=true
-    local can_install_context7=true
-
     if [ "$has_uv" = false ]; then
-        print_warning "Cannot install Serena MCP (uv not installed)"
-        can_install_serena=false
+        print_warning "uv not installed - Serena MCP will require uv to run"
+        print_info "Serena can still be configured, but won't work until uv is installed."
     fi
 
-    if [ "$has_node" = false ]; then
-        print_warning "Cannot install Context7 MCP (Node.js 18+ not installed)"
-        can_install_context7=false
-    fi
+    # Configure .mcp.json
+    ensure_mcp_json
 
-    if [ "$can_install_serena" = false ] && [ "$can_install_context7" = false ]; then
-        print_error "No MCP servers can be installed due to missing prerequisites."
-        print_info "Install the missing prerequisites and run this script again."
-        exit 1
-    fi
-
-    # Install MCP servers
-    local serena_installed=false
-
-    if [ "$can_install_serena" = true ]; then
-        if install_serena_mcp; then
-            serena_installed=true
-        fi
-    fi
-
-    if [ "$can_install_context7" = true ]; then
-        install_context7_mcp
-    fi
-
-    # Index project if Serena was installed
-    if [ "$serena_installed" = true ]; then
+    # Offer to index project if serena is configured and uv is available
+    if is_mcp_configured "serena" && [ "$has_uv" = true ]; then
         index_project_with_serena
     fi
 
@@ -374,12 +330,14 @@ main() {
     print_header "Setup Complete"
     print_success "MCP configuration finished!"
     echo ""
+    print_info "Configuration saved to: $MCP_JSON_FILE"
+    echo ""
     print_info "Next steps:"
     echo "  1. Start Claude Code in this directory"
-    echo "  2. The MCP servers will be available automatically"
+    echo "  2. The MCP servers will be discovered automatically from .mcp.json"
     echo ""
-    print_info "To verify MCP servers are working:"
-    echo "  claude mcp list"
+    print_info "To view current configuration:"
+    echo "  cat .mcp.json | jq"
     echo ""
 }
 

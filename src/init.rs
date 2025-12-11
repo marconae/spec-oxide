@@ -76,6 +76,7 @@ const TEMPLATE_CLAUDE_GITIGNORE: &str = include_str!("../templates/claude/gitign
 /// |           |-- spec.md
 /// |           +-- verification.md
 /// |-- .claude/
+/// |   |-- CLAUDE.md
 /// |   |-- agents/
 /// |   |   |-- spox-implementer.md
 /// |   |   |-- spox-reviewer.md
@@ -87,10 +88,9 @@ const TEMPLATE_CLAUDE_GITIGNORE: &str = include_str!("../templates/claude/gitign
 /// |       |-- setup.md
 /// |       +-- vibe.md
 /// +-- specs/
-/// |   |-- mission.md
-/// |   |-- _changes/
-/// |   +-- _archive/
-/// +-- CLAUDE.md
+///     |-- mission.md
+///     |-- _changes/
+///     +-- _archive/
 /// ```
 pub fn run(base_path: &Path) -> Result<()> {
     // Determine if this is an update (for messaging)
@@ -472,7 +472,7 @@ fn load_or_migrate_config(base_path: &Path) -> Result<Config> {
 /// 2. File exists without markers: append processed SPOX block
 /// 3. File exists with markers: replace content between markers
 fn write_claude_md(base_path: &Path) -> Result<()> {
-    let claude_md_path = base_path.join("CLAUDE.md");
+    let claude_md_path = base_path.join(".claude/CLAUDE.md");
 
     // Load config to get template list
     let config = load_or_migrate_config(base_path)?;
@@ -560,8 +560,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!();
         println!("Updated tooling files:");
         println!("  .spox/           (config, workflow, standards, templates, setup.sh)");
-        println!("  .claude/         (agents, commands)");
-        println!("  CLAUDE.md        (SPOX block)");
+        println!("  .claude/         (agents, commands, CLAUDE.md)");
         println!();
         println!("Preserved user content:");
         println!("  specs/mission.md (not modified)");
@@ -584,6 +583,7 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("        spec.md");
         println!("        verification.md");
         println!("  .claude/");
+        println!("    CLAUDE.md");
         println!("    agents/");
         println!("      spox-implementer.md");
         println!("      spox-reviewer.md");
@@ -598,7 +598,6 @@ fn print_success_message(base_path: &Path, is_update: bool) {
         println!("    mission.md");
         println!("    _changes/");
         println!("    _archive/");
-        println!("  CLAUDE.md");
     }
 
     // Print environment setup instructions
@@ -998,7 +997,7 @@ mod tests {
     fn test_init_creates_claude_md() {
         let temp = TempDir::new().unwrap();
         run(temp.path()).unwrap();
-        let claude_md = temp.path().join("CLAUDE.md");
+        let claude_md = temp.path().join(".claude/CLAUDE.md");
         assert!(claude_md.exists());
         let content = fs::read_to_string(&claude_md).unwrap();
         assert!(content.contains(SPOX_START_MARKER));
@@ -1008,14 +1007,16 @@ mod tests {
     #[test]
     fn test_write_claude_md_appends_to_existing_without_markers() {
         let temp = TempDir::new().unwrap();
-        let claude_md = temp.path().join("CLAUDE.md");
+        let claude_dir = temp.path().join(".claude");
+        let claude_md = claude_dir.join("../.claude/CLAUDE.md");
 
         // Create .spox directory with config.toml (required for write_claude_md)
         let spox_dir = temp.path().join(".spox");
         fs::create_dir_all(&spox_dir).unwrap();
         fs::write(spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML).unwrap();
 
-        // Create existing CLAUDE.md without markers
+        // Create .claude directory and existing CLAUDE.md without markers
+        fs::create_dir_all(&claude_dir).unwrap();
         let existing_content = "# My Project\n\nSome custom instructions.\n";
         fs::write(&claude_md, existing_content).unwrap();
 
@@ -1036,14 +1037,16 @@ mod tests {
     #[test]
     fn test_write_claude_md_replaces_existing_spox_block() {
         let temp = TempDir::new().unwrap();
-        let claude_md = temp.path().join("CLAUDE.md");
+        let claude_dir = temp.path().join(".claude");
+        let claude_md = claude_dir.join("../.claude/CLAUDE.md");
 
         // Create .spox directory with config.toml (required for write_claude_md)
         let spox_dir = temp.path().join(".spox");
         fs::create_dir_all(&spox_dir).unwrap();
         fs::write(spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML).unwrap();
 
-        // Create existing CLAUDE.md with old SPOX block
+        // Create .claude directory and existing CLAUDE.md with old SPOX block
+        fs::create_dir_all(&claude_dir).unwrap();
         let existing_content = "# My Project\n\n<!-- SPOX:START -->\nOld SPOX content\n<!-- SPOX:END -->\n\n## My Custom Section\n";
         fs::write(&claude_md, existing_content).unwrap();
 
@@ -1070,14 +1073,16 @@ mod tests {
     #[test]
     fn test_write_claude_md_preserves_content_outside_markers() {
         let temp = TempDir::new().unwrap();
-        let claude_md = temp.path().join("CLAUDE.md");
+        let claude_dir = temp.path().join(".claude");
+        let claude_md = claude_dir.join("../.claude/CLAUDE.md");
 
         // Create .spox directory with config.toml (required for write_claude_md)
         let spox_dir = temp.path().join(".spox");
         fs::create_dir_all(&spox_dir).unwrap();
         fs::write(spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML).unwrap();
 
-        // Create existing CLAUDE.md with content before and after SPOX block
+        // Create .claude directory and existing CLAUDE.md with content before and after SPOX block
+        fs::create_dir_all(&claude_dir).unwrap();
         let existing_content = "# Header Before\n\nContent before.\n\n<!-- SPOX:START -->\nOld block\n<!-- SPOX:END -->\n\n# Header After\n\nContent after.\n";
         fs::write(&claude_md, existing_content).unwrap();
 
@@ -1262,7 +1267,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run(temp.path()).unwrap();
 
-        let claude_md = temp.path().join("CLAUDE.md");
+        let claude_md = temp.path().join(".claude/CLAUDE.md");
         let content = fs::read_to_string(&claude_md).unwrap();
 
         // Should contain merged system templates
@@ -1276,7 +1281,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run(temp.path()).unwrap();
 
-        let claude_md = temp.path().join("CLAUDE.md");
+        let claude_md = temp.path().join(".claude/CLAUDE.md");
         let content = fs::read_to_string(&claude_md).unwrap();
 
         // Should not contain template markers (they should be replaced)
@@ -1388,7 +1393,7 @@ mod tests {
         let temp = TempDir::new().unwrap();
         run(temp.path()).unwrap();
 
-        let claude_md = temp.path().join("CLAUDE.md");
+        let claude_md = temp.path().join(".claude/CLAUDE.md");
         assert!(claude_md.exists(), "CLAUDE.md should be created");
 
         let content = fs::read_to_string(&claude_md).unwrap();

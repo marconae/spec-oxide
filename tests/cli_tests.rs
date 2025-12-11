@@ -598,8 +598,8 @@ fn test_init_creates_claude_md() {
         .assert()
         .success();
 
-    // Verify CLAUDE.md exists
-    let claude_md_path = temp_dir.path().join("CLAUDE.md");
+    // Verify CLAUDE.md exists in .claude directory
+    let claude_md_path = temp_dir.path().join(".claude/CLAUDE.md");
     assert!(claude_md_path.exists());
     assert!(claude_md_path.is_file());
 
@@ -613,8 +613,10 @@ fn test_init_creates_claude_md() {
 fn test_init_appends_spox_block_to_existing_claude_md() {
     let temp_dir = TempDir::new().unwrap();
 
-    // Create existing CLAUDE.md without SPOX markers
-    let claude_md_path = temp_dir.path().join("CLAUDE.md");
+    // Create .claude directory and existing CLAUDE.md without SPOX markers
+    let claude_dir = temp_dir.path().join(".claude");
+    std::fs::create_dir_all(&claude_dir).unwrap();
+    let claude_md_path = claude_dir.join("../.claude/CLAUDE.md");
     let original_content = "# My Project\n\nCustom instructions.\n";
     std::fs::write(&claude_md_path, original_content).unwrap();
 
@@ -644,8 +646,10 @@ fn test_init_appends_spox_block_to_existing_claude_md() {
 fn test_init_replaces_spox_block_in_existing_claude_md() {
     let temp_dir = TempDir::new().unwrap();
 
-    // Create existing CLAUDE.md with old SPOX block
-    let claude_md_path = temp_dir.path().join("CLAUDE.md");
+    // Create .claude directory and existing CLAUDE.md with old SPOX block
+    let claude_dir = temp_dir.path().join(".claude");
+    std::fs::create_dir_all(&claude_dir).unwrap();
+    let claude_md_path = claude_dir.join("../.claude/CLAUDE.md");
     let existing_content =
         "# Header\n\n<!-- SPOX:START -->\nOld content\n<!-- SPOX:END -->\n\n# Footer\n";
     std::fs::write(&claude_md_path, existing_content).unwrap();
