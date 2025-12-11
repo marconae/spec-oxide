@@ -30,7 +30,7 @@ $ARGUMENTS
 Get the change ID from the user. Look for:
 
 - Change ID in the prompt or `<ChangeId>` block
-- Loose reference (title, summary) → run `spox change list` → confirm with user
+- Loose reference (title, summary) → use `mcp__spox__list_changes` → confirm with user
 - No reference → ask user which deployed change to archive
 
 If you cannot identify a single change ID, stop and ask for clarification.
@@ -39,17 +39,17 @@ If you cannot identify a single change ID, stop and ask for clarification.
 
 Confirm the change is ready to archive:
 
-```bash
-spox change show <id>
-spox change validate
-```
+**Use Spox MCP tools:**
+
+- `mcp__spox__get_change` with `change_id` parameter — Review the change proposal
+- `mcp__spox__validate_change` with `change_id` parameter — Validate the change
 
 **Stop if:**
 
 - Change doesn't exist
 - Change is already archived
 - Validation fails
-- Tasks in `tasks.md` aren't all marked `- [x]`
+- Tasks in the task list aren't all marked `- [x]`
 
 ### 3. Archive the Change
 
@@ -70,16 +70,16 @@ Update the source of truth by applying each delta:
 | `## REMOVED Requirements`  | Remove requirements from specs                       |
 | `## RENAMED Requirements`  | Update requirement names                             |
 
-**Rule**: Always adhere to the template for specs in `.spox/specs/spec.md` - update spec.md files to match the template.
+**Rule**: Always adhere to the template for specs in `.spox/templates/spec.md` - update spec.md files to match the template.
 
 ### 5. Verify Final State
 
 Confirm specs are consistent:
 
-```bash
-spox spec validate
-spox spec list
-```
+**Use Spox MCP tools:**
+
+- `mcp__spox__validate_spec` — Validate all specs
+- `mcp__spox__list_specs` — Confirm updated capabilities
 
 Fix any validation issues before completing.
 
@@ -92,13 +92,3 @@ When complete:
 - `spox spec validate` passes
 
 The change is now part of the permanent specification. Ready for the next proposal.
-
-## Quick Reference
-
-```bash
-spox change list        # Find change IDs
-spox change show <id>   # Review before archiving
-spox change validate    # Verify change is valid
-spox spec validate      # Verify specs after archiving
-spox spec list          # Confirm updated capabilities
-```

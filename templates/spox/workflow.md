@@ -14,27 +14,7 @@ outputs.
 
 This separation keeps diffs explicit and makes multi-spec updates manageable.
 
-**CLI:** Spec Oxide uses a CLI tool called `spox` to list, view, and validate specs and changes.
-
-**Template for specs:**
-
-Use this template for spec documents for the current truth: `.spox/templates/spec.md`
-
-## Commands
-
-Use the `spox` CLI to list, view, and validate specs and changes:
-
-```bash
-spox config show              # Paths (authoritative—use these, not defaults)
-spox spec list                # Current specifications
-spox spec show <id>           # View a spec
-spox change list              # Active change proposals
-spox change show <id>         # View a change (add --deltas-only to debug)
-spox change validate          # Validate before requesting approval
-spox spec validate            # Validate after archiving
-```
-
-For full-text search across specs: `rg -n "pattern" specs`
+**MCP tools:** Use Spox MCP tools for all spec and change operations. See `standards/mcp.md` for tool reference.
 
 ## When to Create a Proposal
 
@@ -55,9 +35,9 @@ New request?
 
 ### Before You Start
 
-1. `spox config show` — get authoritative paths
-2. `spox spec list` + `spox change list` — understand current state
-3. Read `specs/mission.md` — project conventions and context
+1. Read `specs/mission.md` — project conventions and context
+2. Use `mcp__spox__list_specs` and `mcp__spox__list_changes` to check existing state
+3. Use `mcp__spox__search_specs` to find relevant specs
 
 ### Create the Change
 
@@ -70,21 +50,16 @@ New request?
 
 **Required files:**
 
-| File                         | Purpose                                          |
-|------------------------------|--------------------------------------------------|
-| `proposal.md`                | Why this change? What's the impact?              |
-| `tasks.md`                   | Ordered implementation checklist                 |
-| `specs/<capability>/spec.md` | Delta specs (one folder per affected capability) |
+- `proposal.md` — Why this change? What's the impact?
+- `tasks.md` — Ordered implementation checklist
+- `specs/<capability>/spec.md` — Delta specs (one folder per affected capability)
 
-**Optional file:**
-
-| File        | When to Include                                                                                  |
-|-------------|--------------------------------------------------------------------------------------------------|
-| `design.md` | Cross-cutting changes, new dependencies, security/perf concerns, or ambiguity needing resolution |
+**Optional:** `design.md` — Cross-cutting changes, new dependencies, security/perf concerns
 
 **File templates:**
 
 Use these templates for scaffolding:
+
 * `.spox/templates/change/proposal.md`
 * `.spox/templates/change/tasks.md`
 * `.spox/templates/change/design.md` (if needed)
@@ -130,19 +105,19 @@ time.
 Every requirement needs at least one scenario. Format matters:
 
 ```markdown
-#### Scenario: Name ✓ (h4 header)
+#### Scenario: Name     ✓ (h4 header)
 
 - **Scenario: Name**    ✗ (bullet)
-  **Scenario**: Name ✗ (bold text)
+  **Scenario**: Name    ✗ (bold text)
 
-### Scenario: Name ✗ (h3 header)
+### Scenario: Name      ✗ (h3 header)
 ```
 
 ### Validate and Share
 
-```bash
-spox change validate    # Must pass before requesting approval
-```
+Validate proposals before requesting approval:
+
+Use `mcp__spox__validate_change` to validate the change proposal structure and content.
 
 **Stop here.** Do not implement until the proposal is reviewed and approved.
 
@@ -152,17 +127,14 @@ spox change validate    # Must pass before requesting approval
 
 **Goal:** Build exactly what was approved.
 
-Work through these steps as TODOs:
+Work through these steps:
 
-1. **Read** `proposal.md` → understand the why
-2. **Read** `design.md` (if present) → understand technical decisions
-3. **Read** `tasks.md` → get the implementation checklist
-4. **Implement** tasks in order (parallelize via subagents where independent)
-5. **Verify** all tasks complete before updating status
-6. **Update** `tasks.md` — mark each item `- [x]`
-7. **Run** verification agent for final correctness check
-
----
+1. Use `mcp__spox__get_change` to retrieve the change (returns `proposal`, `tasks`, `design`, `deltas`)
+2. Review: `proposal` → `design` (if present) → `deltas` → `tasks`
+3. **Implement** tasks in order (parallelize via subagents where independent)
+4. **Verify** all tasks complete before updating status
+5. **Update** `tasks.md` — mark each item `- [x]`
+6. **Run** verification agent for final correctness check
 
 ## Stage 3: Archive
 
@@ -172,9 +144,9 @@ After deployment:
 
 1. Move `specs/_changes/<id>/` → `specs/_archive/YYYY-MM-DD-<id>/`
 2. Apply deltas to `specs/<capability>/spec.md` files
-3. Run `spox spec validate` to confirm specs are consistent
+3. Use `mcp__spox__validate_spec` to confirm specs are consistent
 
----
+**Template for specs:** Use `.spox/templates/spec.md` for spec documents.
 
 ## Multi-Capability Example
 
@@ -191,31 +163,25 @@ specs/_changes/add-2fa-notify/
         └── spec.md       # ADDED: OTP Email Notification
 ```
 
----
-
 ## Troubleshooting
 
-| Error                                 | Cause                       | Fix                                                                                        |
-|---------------------------------------|-----------------------------|--------------------------------------------------------------------------------------------|
-| "must have at least one delta"        | Missing or empty spec files | Ensure `specs/_changes/<id>/specs/` has `.md` files with `## ADDED\|MODIFIED\|...` headers |
-| "must have at least one scenario"     | Wrong scenario format       | Use `#### Scenario:` (4 hashes, no bullets, no bold)                                       |
-| Silent parse failure                  | Malformed delta             | Run `spox change show <id> --json --deltas-only` to inspect parsed output                  |
-| Validation passes but content missing | Partial MODIFIED            | Paste full requirement text before editing                                                 |
-
----
+- **"must have at least one delta"** — Ensure `specs/_changes/<id>/specs/` has `.md` files with `## ADDED|MODIFIED|...` headers
+- **"must have at least one scenario"** — Use `#### Scenario:` (4 hashes, not bullets or bold)
+- **Silent parse failure** — Use `mcp__spox__get_change` to inspect parsed output
+- **Validation passes but content missing** — For MODIFIED, paste full requirement text before editing
 
 ## Quick Checklist
 
 **Before proposing:**
 
-- [ ] Checked `spox change list` for conflicts
-- [ ] Checked `spox spec list` for existing capabilities
 - [ ] Read `specs/mission.md`
+- [ ] Used `mcp__spox__list_changes` to check for conflicts
+- [ ] Used `mcp__spox__list_specs` to check existing capabilities
 
 **Before requesting approval:**
 
-- [ ] `spox change validate` passes
-- [ ] Every requirement has ≥1 scenario
+- [ ] `mcp__spox__validate_change` passes
+- [ ] Every requirement has at least one scenario
 - [ ] Change ID is verb-led and unique
 
 **Before marking implementation complete:**
@@ -227,4 +193,4 @@ specs/_changes/add-2fa-notify/
 
 - [ ] Change is deployed
 - [ ] Deltas applied to `specs/`
-- [ ] `spox spec validate` passes
+- [ ] `mcp__spox__validate_spec` passes

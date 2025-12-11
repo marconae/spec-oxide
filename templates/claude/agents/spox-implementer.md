@@ -31,12 +31,12 @@ confirmation before.
 
 ### 1. Understand Your Task
 
-Read the change files to understand:
+Use `mcp__spox__get_change` MCP tool to understand your task. The response includes:
 
-- What you're building (from `tasks.md`)
-- Why it matters (from `proposal.md`)
-- What the spec requires (from relevant `specs/_changes/<id>/<capability>/spec.md` deltas)
-- How to build it (from `design.md` if present)
+- `proposal`- Why this change exists, what's the impact
+- `tasks`- What you're building
+- `design`- Technical decisions (if present, may be null)
+- `deltas` - Object keyed by capability name with parsed spec changes
 
 Check for visuals in `specs/_changes/<id>/visuals/` if UI work is involved.
 
@@ -48,7 +48,7 @@ Work through your assigned task(s):
 
 - Keep edits minimal and focused
 - Follow project standards
-- Use `spox change show <id>` for additional context if needed
+- Use `mcp__spox__get_change` MCP tool for additional context if needed
 
 ### 3. Verify
 
@@ -79,7 +79,7 @@ For UI tasks (when browser tools available):
 
 #### 3.3 Confirm Against Spec
 
-- [ ] Re-read your assigned task(s) in `tasks.md`
+- [ ] Re-read your assigned task(s) in the fetched task list
 - [ ] Check each acceptance criterion
 - [ ] Verify implementation matches the spec
 

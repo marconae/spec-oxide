@@ -36,39 +36,89 @@ Agent templates SHALL follow a consistent structure optimized for Claude Code co
 
 ### Requirement: Workflow Template Content
 
-The workflow template SHALL use the `spox` CLI with the correct resource-verb command pattern.
+The workflow template SHALL document CLI commands for human use.
 
-#### Scenario: CLI commands use resource-verb pattern
+#### Scenario: CLI commands for humans
 
-- **WHEN** a user reads `.spox/workflow.md`
-- **THEN** all CLI command examples use the resource-verb pattern
-- **AND** change operations use `spox change <verb>` (e.g., `spox change list`, `spox change show`)
-- **AND** spec operations use `spox spec <verb>` (e.g., `spox spec list`, `spox spec show`)
-- **AND** config operations use `spox config show`
-- **AND** init uses `spox init`
-- **AND** dashboard uses `spox show` (human use only)
+- **WHEN** a user reads workflow.md
+- **THEN** CLI commands are documented for human use
+- **AND** `spox show` is noted as the human dashboard
+
+#### Scenario: No MCP section in workflow
+
+- **WHEN** a user reads workflow.md
+- **THEN** there is no MCP tools section
+- **AND** MCP tools are documented in `standards/mcp.md` instead
 
 #### Scenario: Directory paths are correct
 
-- **WHEN** a user reads `.spox/workflow.md`
-- **THEN** tooling paths reference `.spox/` (e.g., `.spox/config.toml`, `.spox/standards/`)
+- **WHEN** a user reads workflow.md
+- **THEN** tooling paths reference `.spox/` (e.g., `.spox/config.toml`)
 - **AND** spec paths reference `specs/` (e.g., `specs/mission.md`, `specs/_changes/`)
 
 #### Scenario: Consistent branding
 
-- **WHEN** a user reads `.spox/workflow.md`
+- **WHEN** a user reads workflow.md
 - **THEN** the tool is referred to as "Spec Oxide" or "spox"
 
-#### Scenario: Unimplemented commands are marked
+### Requirement: Spox MCP in Standards
 
-- **WHEN** a user reads `.spox/workflow.md`
-- **THEN** commands not yet implemented (like `spox archive`) are marked as "planned" or omitted
+The MCP standards template SHALL document Spox MCP tools for spec and change operations.
 
-#### Scenario: Dashboard in Quick Reference
+#### Scenario: Spox MCP section is first
 
-- **WHEN** a user reads `.spox/workflow.md`
-- **THEN** the Quick Reference section includes `spox show` with note "(human dashboard)"
-- **AND** the description indicates it is for human use, not AI agents
+- **WHEN** a user reads `standards/mcp.md`
+- **THEN** the "Spox MCP" section appears before Serena and Context7 sections
+- **AND** the section documents `list_specs`, `get_spec_requirements`, `get_scenario`, `list_changes`, `get_change`, `search_specs`, `validate_spec`, `validate_change`
+
+#### Scenario: Priority rule includes Spox
+
+- **WHEN** a user reads `standards/mcp.md`
+- **THEN** the priority rule lists Spox first for spec operations
+
+### Requirement: MCP Tools for Agent Templates
+
+Agent and command templates SHALL use Spox MCP tools for spec and change operations.
+
+#### Scenario: Agent reads change via MCP
+
+- **WHEN** an agent template needs to read a change proposal
+- **THEN** it uses `get_change` MCP tool
+- **AND** it does NOT shell out to CLI commands
+
+#### Scenario: Agent discovers specs via MCP
+
+- **WHEN** an agent template needs to discover available specs
+- **THEN** it uses `list_specs` MCP tool
+- **AND** it uses `get_spec_requirements` for requirement structure
+- **AND** it uses `get_scenario` for scenario details
+
+#### Scenario: Agent discovers changes via MCP
+
+- **WHEN** an agent template needs to discover active changes
+- **THEN** it uses `list_changes` MCP tool
+
+#### Scenario: Agent validates via MCP
+
+- **WHEN** an agent template needs to validate specs or changes
+- **THEN** it uses `validate_spec` or `validate_change` MCP tools
+- **AND** it does NOT shell out to `spox spec validate` or `spox change validate` CLI commands
+
+### Requirement: CLI for Human Workflows
+
+The workflow template SHALL document CLI commands for human use only.
+
+#### Scenario: CLI section is human-only
+
+- **WHEN** a user reads workflow.md
+- **THEN** CLI commands are documented for human use
+- **AND** there is no MCP section (MCP is documented in standards)
+
+#### Scenario: Validation commands documented
+
+- **WHEN** a user reads workflow.md
+- **THEN** `spox change validate` and `spox spec validate` are documented
+- **AND** `spox show` is documented as the human dashboard
 
 ### Requirement: Agent Template Content
 
@@ -91,43 +141,6 @@ The agent templates SHALL NOT reference standards files directly since content i
 - **WHEN** an agent template is loaded
 - **THEN** it does NOT use `@.spox/workflow.md` reference
 - **AND** workflow content is available via merged CLAUDE.md
-
-### Requirement: Command Template Content
-
-The slash command templates SHALL use the `spox` CLI with the correct resource-verb command pattern.
-
-#### Scenario: CLI commands use resource-verb pattern
-
-- **WHEN** a command template contains CLI examples
-- **THEN** all commands use the resource-verb pattern
-- **AND** `spox change list` is used instead of `spox list`
-- **AND** `spox spec list` is used instead of `spox list --specs`
-
-#### Scenario: Metadata uses Spec Oxide branding
-
-- **WHEN** a command template has frontmatter metadata
-- **THEN** the name and category use "Spec Oxide"
-- **AND** tags use "spox" or "spec-oxide"
-
-#### Scenario: Path references are correct
-
-- **WHEN** a command template references file paths
-- **THEN** changes are in `specs/_changes/`
-- **AND** specs are in `specs/`
-
-#### Scenario: Token-efficient command usage for agents
-
-- **WHEN** a command template is used by AI coding agents
-- **THEN** it prefers `spox spec list` and `spox change list` for context (token-efficient)
-- **AND** it uses `spox spec show <id>` only when specific spec details are needed
-- **AND** it uses `spox change show <id>` only when specific change details are needed
-- **AND** it does NOT use `spox show` (dashboard is for humans only)
-
-#### Scenario: No file references needed in commands
-
-- **WHEN** a command template is loaded
-- **THEN** it SHALL NOT use `@` syntax for standards, workflow, or mission files
-- **AND** this is because these files are merged into `.claude/CLAUDE.md` which is auto-loaded
 
 ### Requirement: CLAUDE Template Convention
 

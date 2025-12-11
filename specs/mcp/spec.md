@@ -1,4 +1,10 @@
-## ADDED Requirements
+# mcp Specification
+
+## Purpose
+
+Define the MCP (Model Context Protocol) server for Spec Oxide that provides AI coding assistants with structured access to specs and changes. The MCP server acts as a presentation layer that delegates to Core and formats responses for the MCP protocol.
+
+## Requirements
 
 ### Requirement: MCP Interface Layer
 
@@ -111,6 +117,115 @@ The MCP server SHALL provide a `search_specs` tool that performs semantic search
 - **WHEN** the `search_specs` tool is called with a query
 - **AND** no specs match the query above the relevance threshold
 - **THEN** the response contains an empty results array
+
+### Requirement: List Changes Tool
+
+The MCP server SHALL provide a `list_changes` tool that returns an index of all active change proposals.
+
+#### Scenario: List all active changes
+
+- **WHEN** `list_changes` tool is called
+- **THEN** return JSON array of change objects
+- **AND** each object contains `id`, `title`, and `task_progress` fields
+- **AND** `task_progress` contains `completed` and `total` counts
+
+#### Scenario: No active changes
+
+- **WHEN** `list_changes` tool is called with no active changes
+- **THEN** return JSON with empty `changes` array
+- **AND** operation succeeds (no error)
+
+### Requirement: Get Change Tool
+
+The MCP server SHALL provide a `get_change` tool that returns the full content of a change proposal.
+
+#### Scenario: Get full change
+
+- **WHEN** `get_change` tool is called with valid `change_id`
+- **THEN** return JSON object containing `proposal`, `tasks`, `design` (if present), and `deltas`
+- **AND** `deltas` is an object keyed by capability name
+- **AND** each delta contains the parsed requirement changes
+
+#### Scenario: Get change section
+
+- **WHEN** `get_change` tool is called with `change_id` and `section` parameter
+- **AND** `section` is one of "proposal", "tasks", "design", "deltas"
+- **THEN** return only the requested section content
+
+#### Scenario: Change not found
+
+- **WHEN** `get_change` tool is called with non-existent `change_id`
+- **THEN** return error indicating change was not found
+
+### Requirement: Validate Spec Tool
+
+The MCP server SHALL provide a `validate_spec` tool that validates spec structure and content.
+
+#### Scenario: Validate all specs
+
+- **WHEN** `validate_spec` is called without parameters
+- **THEN** system validates all specs in the project
+- **AND** returns validation results with errors, warnings, and summary
+
+#### Scenario: Validate specific spec
+
+- **WHEN** `validate_spec` is called with `spec_id` parameter
+- **THEN** system validates only the specified spec
+- **AND** returns validation results for that spec
+
+#### Scenario: Spec not found
+
+- **WHEN** `validate_spec` is called with non-existent `spec_id`
+- **THEN** system returns an error indicating spec not found
+
+#### Scenario: Validation passes
+
+- **WHEN** spec(s) pass validation
+- **THEN** `valid` field is `true`
+- **AND** `errors` array is empty
+- **AND** `summary` indicates success
+
+#### Scenario: Validation fails
+
+- **WHEN** spec(s) fail validation
+- **THEN** `valid` field is `false`
+- **AND** `errors` array contains actionable error messages
+- **AND** each error includes file path and description
+
+### Requirement: Validate Change Tool
+
+The MCP server SHALL provide a `validate_change` tool that validates change proposal structure and content.
+
+#### Scenario: Validate all changes
+
+- **WHEN** `validate_change` is called without parameters
+- **THEN** system validates all active change proposals
+- **AND** returns validation results with errors, warnings, and summary
+
+#### Scenario: Validate specific change
+
+- **WHEN** `validate_change` is called with `change_id` parameter
+- **THEN** system validates only the specified change
+- **AND** returns validation results for that change
+
+#### Scenario: Change not found
+
+- **WHEN** `validate_change` is called with non-existent `change_id`
+- **THEN** system returns an error indicating change not found
+
+#### Scenario: Validation passes
+
+- **WHEN** change(s) pass validation
+- **THEN** `valid` field is `true`
+- **AND** `errors` array is empty
+- **AND** `summary` indicates success
+
+#### Scenario: Validation fails
+
+- **WHEN** change(s) fail validation
+- **THEN** `valid` field is `false`
+- **AND** `errors` array contains actionable error messages
+- **AND** each error includes file path, section, and description
 
 ### Requirement: Graceful Degradation
 

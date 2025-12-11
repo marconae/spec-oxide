@@ -23,13 +23,12 @@ $ARGUMENTS
 
 ## Understand the Change
 
-Read the change-specific files:
+Use Spox MCP tools to read the change:
 
 ```
-specs/_changes/<id>/proposal.md             # Why this change exists
-specs/_changes/<id>/design.md               # Technical decisions (if present)
-specs/_changes/<id>/<capability>/spec.md    # Changed requirements for each affected capability
-specs/_changes/<id>/tasks.md                # Implementation checklist
+mcp__spox__get_change(<id>)                 # Get full change proposal content
+mcp__spox__list_specs                       # List available specs
+mcp__spox__get_spec_requirements(<spec-id>) # Get requirements for comparison
 ```
 
 Important: there may be more than one capability spec if multiple capabilities are affected.

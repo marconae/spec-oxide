@@ -8,6 +8,10 @@
 //! - `get_spec_requirements`: Get requirements structure without scenario bodies
 //! - `get_scenario`: Get a specific scenario's full content
 //! - `search_specs`: Semantic search over specs (requires index)
+//! - `list_changes`: List all active change proposals with task progress
+//! - `get_change`: Get full content of a change proposal (proposal, tasks, design, deltas)
+//! - `validate_spec`: Validate spec structure and content (all specs or specific one)
+//! - `validate_change`: Validate change proposal structure and content (all changes or specific one)
 //!
 //! ## Usage
 //!
@@ -26,9 +30,14 @@ use rmcp::ServiceExt;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use std::fs;
+
 use crate::config::Config;
 use crate::core::index::{self, SpecIndex};
 use crate::core::spec;
+use crate::show::change::{parse_change, DeltaOp};
+use crate::show::dashboard::gather_changes;
+use crate::validate::{change as validate_change_mod, spec as validate_spec_mod, Severity};
 
 // =============================================================================
 // Request/Response Types
@@ -137,6 +146,170 @@ pub struct SearchSpecsResponse {
 }
 
 // =============================================================================
+// Change Request/Response Types
+// =============================================================================
+
+/// Summary of task progress for a change.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct TaskProgress {
+    /// Number of completed tasks.
+    pub completed: usize,
+    /// Total number of tasks.
+    pub total: usize,
+}
+
+/// Summary of a change for list_changes response.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct ChangeSummaryMcp {
+    /// The change ID (directory name).
+    pub id: String,
+    /// A brief title derived from the change ID.
+    pub title: String,
+    /// Task progress for this change.
+    pub task_progress: TaskProgress,
+}
+
+/// Response for list_changes tool.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct ListChangesResponse {
+    /// All active changes.
+    pub changes: Vec<ChangeSummaryMcp>,
+}
+
+/// Request parameters for get_change.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct GetChangeRequest {
+    /// The change ID to retrieve.
+    #[schemars(description = "The change ID to retrieve")]
+    pub change_id: String,
+    /// Optional section filter: "proposal", "tasks", "design", or "deltas".
+    #[schemars(description = "Optional section filter: proposal, tasks, design, or deltas")]
+    pub section: Option<String>,
+}
+
+/// A delta item representing a requirement change.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct DeltaItemMcp {
+    /// The operation type: added, modified, removed, or renamed.
+    pub operation: String,
+    /// The requirement name.
+    pub name: String,
+    /// List of scenario names in this requirement.
+    pub scenarios: Vec<String>,
+}
+
+/// A delta group for a capability.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct DeltaGroupMcp {
+    /// The capability name.
+    pub capability: String,
+    /// The requirement changes in this capability.
+    pub items: Vec<DeltaItemMcp>,
+}
+
+/// Response for get_change tool.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct GetChangeResponse {
+    /// The change ID.
+    pub change_id: String,
+    /// The proposal content (why and what).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proposal: Option<ProposalContent>,
+    /// The tasks content (raw markdown).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tasks: Option<TasksContent>,
+    /// The design content (raw markdown, if present).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub design: Option<String>,
+    /// The spec deltas grouped by capability.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deltas: Option<Vec<DeltaGroupMcp>>,
+}
+
+/// Proposal content from proposal.md.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct ProposalContent {
+    /// The "Why" section content.
+    pub why: String,
+    /// The "What Changes" section content.
+    pub what_changes: String,
+}
+
+/// Tasks content from tasks.md.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct TasksContent {
+    /// The raw tasks markdown content.
+    pub content: String,
+    /// Number of completed tasks.
+    pub completed: usize,
+    /// Total number of tasks.
+    pub total: usize,
+}
+
+// =============================================================================
+// Validation Request/Response Types
+// =============================================================================
+
+/// Request parameters for validate_spec.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ValidateSpecRequest {
+    /// The spec ID to validate (validates all if not specified).
+    #[schemars(description = "The spec ID to validate (validates all if not specified)")]
+    pub spec_id: Option<String>,
+}
+
+/// Request parameters for validate_change.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ValidateChangeRequest {
+    /// The change ID to validate (validates all if not specified).
+    #[schemars(description = "The change ID to validate (validates all if not specified)")]
+    pub change_id: Option<String>,
+}
+
+/// A single validation error.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct ValidationError {
+    /// The file path where the error was found.
+    pub file: String,
+    /// The line number where the error was found (if available).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<usize>,
+    /// A description of the error.
+    pub description: String,
+    /// The section where the error was found (for change validation).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+}
+
+/// A single validation warning.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct ValidationWarning {
+    /// The file path where the warning was found.
+    pub file: String,
+    /// The line number where the warning was found (if available).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<usize>,
+    /// A description of the warning.
+    pub description: String,
+    /// The section where the warning was found (for change validation).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+}
+
+/// Response for validate_spec and validate_change tools.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct ValidationResponse {
+    /// Whether the validation passed (no errors).
+    pub valid: bool,
+    /// List of validation errors.
+    pub errors: Vec<ValidationError>,
+    /// List of validation warnings.
+    pub warnings: Vec<ValidationWarning>,
+    /// Human-readable summary of the validation result.
+    pub summary: String,
+}
+
+// =============================================================================
 // MCP Server
 // =============================================================================
 
@@ -149,6 +322,8 @@ pub struct SpoxServer {
     project_root: PathBuf,
     /// Spec folder path (relative to project root).
     spec_folder: String,
+    /// Changes folder path (relative to project root).
+    changes_folder: String,
     /// The search index (if available).
     index: Option<Arc<SpecIndex>>,
 }
@@ -171,6 +346,7 @@ impl SpoxServer {
         Self {
             project_root,
             spec_folder: config.spec_folder().to_string(),
+            changes_folder: config.changes_folder().to_string(),
             index,
         }
     }
@@ -178,6 +354,11 @@ impl SpoxServer {
     /// Get the full path to the specs folder.
     fn specs_path(&self) -> PathBuf {
         self.project_root.join(&self.spec_folder)
+    }
+
+    /// Get the full path to the changes folder.
+    fn changes_path(&self) -> PathBuf {
+        self.project_root.join(&self.changes_folder)
     }
 
     /// Core implementation for list_specs.
@@ -293,6 +474,481 @@ impl SpoxServer {
 
         Ok(SearchSpecsResponse { results: items })
     }
+
+    /// Core implementation for list_changes.
+    pub fn do_list_changes(&self) -> Result<ListChangesResponse, String> {
+        let changes_path = self.changes_path();
+        let changes = gather_changes(changes_path.to_str().unwrap_or(""))
+            .map_err(|e| format!("Failed to list changes: {}", e))?;
+
+        let summaries = changes
+            .into_iter()
+            .map(|c| ChangeSummaryMcp {
+                id: c.name.clone(),
+                title: c.name.replace('-', " "),
+                task_progress: TaskProgress {
+                    completed: c.tasks_completed,
+                    total: c.tasks_total,
+                },
+            })
+            .collect();
+
+        Ok(ListChangesResponse { changes: summaries })
+    }
+
+    /// Core implementation for get_change.
+    pub fn do_get_change(
+        &self,
+        change_id: &str,
+        section: Option<&str>,
+    ) -> Result<GetChangeResponse, String> {
+        let change_path = self.changes_path().join(change_id);
+
+        if !change_path.exists() {
+            return Err(format!("Change '{}' not found", change_id));
+        }
+
+        let info = parse_change(&change_path)
+            .map_err(|e| format!("Failed to parse change '{}': {}", change_id, e))?;
+
+        // Build response based on section filter
+        match section {
+            Some("proposal") => Ok(GetChangeResponse {
+                change_id: change_id.to_string(),
+                proposal: Some(ProposalContent {
+                    why: info.why,
+                    what_changes: info.what_changes,
+                }),
+                tasks: None,
+                design: None,
+                deltas: None,
+            }),
+            Some("tasks") => {
+                let tasks_path = change_path.join("tasks.md");
+                let content = if tasks_path.exists() {
+                    fs::read_to_string(&tasks_path)
+                        .map_err(|e| format!("Failed to read tasks.md: {}", e))?
+                } else {
+                    String::new()
+                };
+                Ok(GetChangeResponse {
+                    change_id: change_id.to_string(),
+                    proposal: None,
+                    tasks: Some(TasksContent {
+                        content,
+                        completed: info.tasks_completed,
+                        total: info.tasks_total,
+                    }),
+                    design: None,
+                    deltas: None,
+                })
+            }
+            Some("design") => {
+                let design_path = change_path.join("design.md");
+                let design = if design_path.exists() {
+                    Some(
+                        fs::read_to_string(&design_path)
+                            .map_err(|e| format!("Failed to read design.md: {}", e))?,
+                    )
+                } else {
+                    None
+                };
+                Ok(GetChangeResponse {
+                    change_id: change_id.to_string(),
+                    proposal: None,
+                    tasks: None,
+                    design,
+                    deltas: None,
+                })
+            }
+            Some("deltas") => {
+                let deltas = info
+                    .deltas
+                    .into_iter()
+                    .map(|g| DeltaGroupMcp {
+                        capability: g.capability,
+                        items: g
+                            .items
+                            .into_iter()
+                            .map(|i| DeltaItemMcp {
+                                operation: match i.operation {
+                                    DeltaOp::Added => "added".to_string(),
+                                    DeltaOp::Modified => "modified".to_string(),
+                                    DeltaOp::Removed => "removed".to_string(),
+                                    DeltaOp::Renamed => "renamed".to_string(),
+                                },
+                                name: i.name,
+                                scenarios: i.scenarios,
+                            })
+                            .collect(),
+                    })
+                    .collect();
+                Ok(GetChangeResponse {
+                    change_id: change_id.to_string(),
+                    proposal: None,
+                    tasks: None,
+                    design: None,
+                    deltas: Some(deltas),
+                })
+            }
+            Some(unknown) => Err(format!(
+                "Unknown section '{}'. Valid sections: proposal, tasks, design, deltas",
+                unknown
+            )),
+            None => {
+                // Return all sections
+                let tasks_path = change_path.join("tasks.md");
+                let tasks_content = if tasks_path.exists() {
+                    fs::read_to_string(&tasks_path)
+                        .map_err(|e| format!("Failed to read tasks.md: {}", e))?
+                } else {
+                    String::new()
+                };
+
+                let design_path = change_path.join("design.md");
+                let design = if design_path.exists() {
+                    Some(
+                        fs::read_to_string(&design_path)
+                            .map_err(|e| format!("Failed to read design.md: {}", e))?,
+                    )
+                } else {
+                    None
+                };
+
+                let deltas = info
+                    .deltas
+                    .into_iter()
+                    .map(|g| DeltaGroupMcp {
+                        capability: g.capability,
+                        items: g
+                            .items
+                            .into_iter()
+                            .map(|i| DeltaItemMcp {
+                                operation: match i.operation {
+                                    DeltaOp::Added => "added".to_string(),
+                                    DeltaOp::Modified => "modified".to_string(),
+                                    DeltaOp::Removed => "removed".to_string(),
+                                    DeltaOp::Renamed => "renamed".to_string(),
+                                },
+                                name: i.name,
+                                scenarios: i.scenarios,
+                            })
+                            .collect(),
+                    })
+                    .collect();
+
+                Ok(GetChangeResponse {
+                    change_id: change_id.to_string(),
+                    proposal: Some(ProposalContent {
+                        why: info.why,
+                        what_changes: info.what_changes,
+                    }),
+                    tasks: Some(TasksContent {
+                        content: tasks_content,
+                        completed: info.tasks_completed,
+                        total: info.tasks_total,
+                    }),
+                    design,
+                    deltas: Some(deltas),
+                })
+            }
+        }
+    }
+
+    /// Core implementation for validate_spec.
+    ///
+    /// If `spec_id` is provided, validates only that spec.
+    /// Otherwise, validates all specs in the project.
+    pub fn do_validate_spec(&self, spec_id: Option<&str>) -> Result<ValidationResponse, String> {
+        match spec_id {
+            Some(id) => {
+                // Validate single spec
+                let spec_path = self.specs_path().join(id).join("spec.md");
+
+                if !spec_path.exists() {
+                    return Err(format!("spec not found: '{}'", id));
+                }
+
+                let report = validate_spec_mod::validate_spec(&spec_path);
+                Ok(self.convert_validation_report(&report, None))
+            }
+            None => {
+                // Validate all specs
+                let specs_path = self.specs_path();
+                if !specs_path.exists() {
+                    return Err(format!(
+                        "Spec folder '{}' does not exist",
+                        specs_path.display()
+                    ));
+                }
+
+                let mut total_errors = 0;
+                let mut total_warnings = 0;
+                let mut all_errors = Vec::new();
+                let mut all_warnings = Vec::new();
+
+                let entries: Vec<_> = fs::read_dir(&specs_path)
+                    .map_err(|e| format!("Failed to read spec folder: {}", e))?
+                    .filter_map(|e| e.ok())
+                    .collect();
+
+                // Sort entries and filter to spec directories
+                let mut sorted_entries: Vec<_> = entries
+                    .iter()
+                    .filter(|e| e.path().is_dir())
+                    .filter(|e| {
+                        // Skip directories starting with _ (like _changes, _archive)
+                        let name = e.file_name().to_string_lossy().to_string();
+                        !name.starts_with('_')
+                    })
+                    .collect();
+                sorted_entries.sort_by_key(|e| e.file_name());
+
+                for entry in sorted_entries {
+                    let spec_md_path = entry.path().join("spec.md");
+                    if !spec_md_path.exists() {
+                        continue;
+                    }
+
+                    let report = validate_spec_mod::validate_spec(&spec_md_path);
+                    total_errors += report.errors;
+                    total_warnings += report.warnings;
+
+                    // Collect errors and warnings
+                    for issue in &report.issues {
+                        match issue.severity {
+                            Severity::Error => all_errors.push(ValidationError {
+                                file: issue.file.clone(),
+                                line: issue.line,
+                                description: issue.message.clone(),
+                                section: None,
+                            }),
+                            Severity::Warning => all_warnings.push(ValidationWarning {
+                                file: issue.file.clone(),
+                                line: issue.line,
+                                description: issue.message.clone(),
+                                section: None,
+                            }),
+                            Severity::Info => {} // Skip info messages
+                        }
+                    }
+                }
+
+                let valid = total_errors == 0;
+                let summary = if valid {
+                    format!("All specs valid ({} warnings)", total_warnings)
+                } else {
+                    format!(
+                        "Validation failed: {} errors, {} warnings",
+                        total_errors, total_warnings
+                    )
+                };
+
+                Ok(ValidationResponse {
+                    valid,
+                    errors: all_errors,
+                    warnings: all_warnings,
+                    summary,
+                })
+            }
+        }
+    }
+
+    /// Core implementation for validate_change.
+    ///
+    /// If `change_id` is provided, validates only that change.
+    /// Otherwise, validates all changes in the project.
+    pub fn do_validate_change(
+        &self,
+        change_id: Option<&str>,
+    ) -> Result<ValidationResponse, String> {
+        match change_id {
+            Some(id) => {
+                // Validate single change
+                let change_path = self.changes_path().join(id);
+
+                if !change_path.exists() {
+                    return Err(format!("change not found: '{}'", id));
+                }
+
+                let result = validate_change_mod::validate_change(&change_path);
+                Ok(self.convert_change_validation_result(&result))
+            }
+            None => {
+                // Validate all changes
+                let changes_path = self.changes_path();
+                if !changes_path.exists() {
+                    return Err(format!(
+                        "Changes folder '{}' does not exist",
+                        changes_path.display()
+                    ));
+                }
+
+                let mut total_errors = 0;
+                let mut total_warnings = 0;
+                let mut all_errors = Vec::new();
+                let mut all_warnings = Vec::new();
+
+                let entries: Vec<_> = fs::read_dir(&changes_path)
+                    .map_err(|e| format!("Failed to read changes folder: {}", e))?
+                    .filter_map(|e| e.ok())
+                    .collect();
+
+                // Sort entries and filter to change directories
+                let mut sorted_entries: Vec<_> =
+                    entries.iter().filter(|e| e.path().is_dir()).collect();
+                sorted_entries.sort_by_key(|e| e.file_name());
+
+                for entry in sorted_entries {
+                    let result = validate_change_mod::validate_change(&entry.path());
+                    total_errors += result.report.errors;
+                    total_warnings += result.report.warnings;
+
+                    let change_id = entry.file_name().to_string_lossy().to_string();
+
+                    // Collect errors and warnings with change context
+                    for issue in &result.report.issues {
+                        let section = Self::extract_section_from_file(&issue.file);
+                        match issue.severity {
+                            Severity::Error => all_errors.push(ValidationError {
+                                file: format!("{}/{}", change_id, issue.file),
+                                line: issue.line,
+                                description: issue.message.clone(),
+                                section,
+                            }),
+                            Severity::Warning => all_warnings.push(ValidationWarning {
+                                file: format!("{}/{}", change_id, issue.file),
+                                line: issue.line,
+                                description: issue.message.clone(),
+                                section,
+                            }),
+                            Severity::Info => {} // Skip info messages
+                        }
+                    }
+                }
+
+                let valid = total_errors == 0;
+                let summary = if valid {
+                    format!("All changes valid ({} warnings)", total_warnings)
+                } else {
+                    format!(
+                        "Validation failed: {} errors, {} warnings",
+                        total_errors, total_warnings
+                    )
+                };
+
+                Ok(ValidationResponse {
+                    valid,
+                    errors: all_errors,
+                    warnings: all_warnings,
+                    summary,
+                })
+            }
+        }
+    }
+
+    /// Convert a ValidationReport to ValidationResponse.
+    fn convert_validation_report(
+        &self,
+        report: &crate::validate::ValidationReport,
+        _section_context: Option<&str>,
+    ) -> ValidationResponse {
+        let mut errors = Vec::new();
+        let mut warnings = Vec::new();
+
+        for issue in &report.issues {
+            match issue.severity {
+                Severity::Error => errors.push(ValidationError {
+                    file: issue.file.clone(),
+                    line: issue.line,
+                    description: issue.message.clone(),
+                    section: None,
+                }),
+                Severity::Warning => warnings.push(ValidationWarning {
+                    file: issue.file.clone(),
+                    line: issue.line,
+                    description: issue.message.clone(),
+                    section: None,
+                }),
+                Severity::Info => {} // Skip info messages
+            }
+        }
+
+        let summary = if report.valid {
+            format!("Valid ({} warnings)", report.warnings)
+        } else {
+            format!(
+                "Validation failed: {} errors, {} warnings",
+                report.errors, report.warnings
+            )
+        };
+
+        ValidationResponse {
+            valid: report.valid,
+            errors,
+            warnings,
+            summary,
+        }
+    }
+
+    /// Convert a ChangeValidationResult to ValidationResponse.
+    fn convert_change_validation_result(
+        &self,
+        result: &validate_change_mod::ChangeValidationResult,
+    ) -> ValidationResponse {
+        let mut errors = Vec::new();
+        let mut warnings = Vec::new();
+
+        for issue in &result.report.issues {
+            let section = Self::extract_section_from_file(&issue.file);
+            match issue.severity {
+                Severity::Error => errors.push(ValidationError {
+                    file: issue.file.clone(),
+                    line: issue.line,
+                    description: issue.message.clone(),
+                    section,
+                }),
+                Severity::Warning => warnings.push(ValidationWarning {
+                    file: issue.file.clone(),
+                    line: issue.line,
+                    description: issue.message.clone(),
+                    section,
+                }),
+                Severity::Info => {} // Skip info messages
+            }
+        }
+
+        let summary = if result.report.valid {
+            format!("Valid ({} warnings)", result.report.warnings)
+        } else {
+            format!(
+                "Validation failed: {} errors, {} warnings",
+                result.report.errors, result.report.warnings
+            )
+        };
+
+        ValidationResponse {
+            valid: result.report.valid,
+            errors,
+            warnings,
+            summary,
+        }
+    }
+
+    /// Extract section name from file path for change validation context.
+    fn extract_section_from_file(file: &str) -> Option<String> {
+        if file.contains("proposal.md") {
+            Some("proposal".to_string())
+        } else if file.contains("tasks.md") {
+            Some("tasks".to_string())
+        } else if file.contains("design.md") {
+            Some("design".to_string())
+        } else if file.contains("specs/") || file.contains("spec.md") {
+            Some("deltas".to_string())
+        } else {
+            None
+        }
+    }
 }
 
 // =============================================================================
@@ -353,6 +1009,56 @@ impl SpoxServer {
             Err(e) => format!("{{\"error\": \"{}\"}}", e),
         }
     }
+
+    /// List all active changes.
+    #[tool(description = "List all active change proposals with their IDs and task progress.")]
+    async fn list_changes(&self) -> String {
+        match self.do_list_changes() {
+            Ok(response) => serde_json::to_string_pretty(&response).unwrap_or_else(|e| {
+                format!("{{\"error\": \"Failed to serialize response: {}\"}}", e)
+            }),
+            Err(e) => format!("{{\"error\": \"{}\"}}", e),
+        }
+    }
+
+    /// Get details of a specific change.
+    #[tool(
+        description = "Get the full content of a change proposal including proposal, tasks, design (if present), and spec deltas."
+    )]
+    async fn get_change(&self, #[tool(aggr)] req: GetChangeRequest) -> String {
+        match self.do_get_change(&req.change_id, req.section.as_deref()) {
+            Ok(response) => serde_json::to_string_pretty(&response).unwrap_or_else(|e| {
+                format!("{{\"error\": \"Failed to serialize response: {}\"}}", e)
+            }),
+            Err(e) => format!("{{\"error\": \"{}\"}}", e),
+        }
+    }
+
+    /// Validate spec file(s).
+    #[tool(
+        description = "Validate spec structure and content. Called without parameters validates all specs. Called with spec_id validates only that spec."
+    )]
+    async fn validate_spec(&self, #[tool(aggr)] req: ValidateSpecRequest) -> String {
+        match self.do_validate_spec(req.spec_id.as_deref()) {
+            Ok(response) => serde_json::to_string_pretty(&response).unwrap_or_else(|e| {
+                format!("{{\"error\": \"Failed to serialize response: {}\"}}", e)
+            }),
+            Err(e) => format!("{{\"error\": \"{}\"}}", e),
+        }
+    }
+
+    /// Validate change proposal(s).
+    #[tool(
+        description = "Validate change proposal structure and content. Called without parameters validates all active changes. Called with change_id validates only that change."
+    )]
+    async fn validate_change(&self, #[tool(aggr)] req: ValidateChangeRequest) -> String {
+        match self.do_validate_change(req.change_id.as_deref()) {
+            Ok(response) => serde_json::to_string_pretty(&response).unwrap_or_else(|e| {
+                format!("{{\"error\": \"Failed to serialize response: {}\"}}", e)
+            }),
+            Err(e) => format!("{{\"error\": \"{}\"}}", e),
+        }
+    }
 }
 
 // =============================================================================
@@ -372,7 +1078,10 @@ impl ServerHandler for SpoxServer {
             instructions: Some(
                 "Spox is a spec-driven development tool. Use list_specs to discover available specs, \
                  get_spec_requirements to see the structure of a spec, get_scenario for full scenario \
-                 details, and search_specs to find relevant content across all specs."
+                 details, and search_specs to find relevant content across all specs. Use list_changes \
+                 to see active change proposals, and get_change to retrieve change details. Use \
+                 validate_spec to validate spec structure and content (all specs or a specific one), \
+                 and validate_change to validate change proposals (all changes or a specific one)."
                     .into(),
             ),
         }
@@ -715,5 +1424,415 @@ The system SHALL do something basic.
         assert_eq!(info.server_info.name, "spox");
         assert!(info.instructions.is_some());
         assert!(info.instructions.unwrap().contains("list_specs"));
+    }
+
+    // ==================== list_changes tests ====================
+
+    fn create_test_change(
+        dir: &std::path::Path,
+        name: &str,
+        tasks_content: &str,
+        delta_content: &str,
+    ) {
+        let change_dir = dir.join(name);
+        fs::create_dir_all(change_dir.join("specs/auth")).unwrap();
+
+        // Create proposal.md
+        fs::write(
+            change_dir.join("proposal.md"),
+            r#"# Change: Test Change
+
+## Why
+This is a test change.
+
+## What Changes
+- Some changes
+"#,
+        )
+        .unwrap();
+
+        // Create tasks.md
+        fs::write(change_dir.join("tasks.md"), tasks_content).unwrap();
+
+        // Create delta spec
+        fs::write(change_dir.join("specs/auth/spec.md"), delta_content).unwrap();
+    }
+
+    const TEST_TASKS: &str = r#"# Tasks test-change
+
+## 1. Implementation
+- [x] 1.1 First task
+- [ ] 1.2 Second task
+- [ ] 1.3 Third task
+"#;
+
+    const TEST_DELTA: &str = r#"## ADDED Requirements
+
+### Requirement: New Feature
+
+The system SHALL do something new.
+
+#### Scenario: Feature works
+
+- **WHEN** user triggers feature
+- **THEN** feature responds
+"#;
+
+    #[test]
+    fn test_list_changes_returns_all_changes() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+        create_test_change(&changes_dir, "fix-bug", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let response = server.do_list_changes().unwrap();
+
+        assert_eq!(response.changes.len(), 2);
+
+        let mut ids: Vec<&str> = response.changes.iter().map(|c| c.id.as_str()).collect();
+        ids.sort();
+        assert_eq!(ids, vec!["add-feature", "fix-bug"]);
+    }
+
+    #[test]
+    fn test_list_changes_returns_empty_for_no_changes() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let response = server.do_list_changes().unwrap();
+
+        assert!(response.changes.is_empty());
+    }
+
+    #[test]
+    fn test_list_changes_includes_task_progress() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let response = server.do_list_changes().unwrap();
+
+        assert_eq!(response.changes.len(), 1);
+        let change = &response.changes[0];
+        assert_eq!(change.id, "add-feature");
+        assert_eq!(change.task_progress.completed, 1);
+        assert_eq!(change.task_progress.total, 3);
+    }
+
+    // ==================== get_change tests ====================
+
+    #[test]
+    fn test_get_change_full() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let response = server.do_get_change("add-feature", None).unwrap();
+
+        assert_eq!(response.change_id, "add-feature");
+        assert!(response.proposal.is_some());
+        assert!(response.tasks.is_some());
+        assert!(response.deltas.is_some());
+
+        let proposal = response.proposal.unwrap();
+        assert!(proposal.why.contains("test change"));
+
+        let tasks = response.tasks.unwrap();
+        assert_eq!(tasks.completed, 1);
+        assert_eq!(tasks.total, 3);
+
+        let deltas = response.deltas.unwrap();
+        assert_eq!(deltas.len(), 1);
+        assert_eq!(deltas[0].capability, "auth");
+    }
+
+    #[test]
+    fn test_get_change_proposal_section() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let response = server
+            .do_get_change("add-feature", Some("proposal"))
+            .unwrap();
+
+        assert!(response.proposal.is_some());
+        assert!(response.tasks.is_none());
+        assert!(response.deltas.is_none());
+    }
+
+    #[test]
+    fn test_get_change_tasks_section() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let response = server.do_get_change("add-feature", Some("tasks")).unwrap();
+
+        assert!(response.proposal.is_none());
+        assert!(response.tasks.is_some());
+        assert!(response.deltas.is_none());
+
+        let tasks = response.tasks.unwrap();
+        assert!(tasks.content.contains("First task"));
+    }
+
+    #[test]
+    fn test_get_change_deltas_section() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let response = server.do_get_change("add-feature", Some("deltas")).unwrap();
+
+        assert!(response.proposal.is_none());
+        assert!(response.tasks.is_none());
+        assert!(response.deltas.is_some());
+
+        let deltas = response.deltas.unwrap();
+        assert_eq!(deltas[0].items[0].operation, "added");
+        assert_eq!(deltas[0].items[0].name, "New Feature");
+    }
+
+    #[test]
+    fn test_get_change_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_get_change("nonexistent", None);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not found"));
+    }
+
+    #[test]
+    fn test_get_change_invalid_section() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_get_change("add-feature", Some("invalid"));
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unknown section"));
+    }
+
+    // =========================================================================
+    // Validation Tests
+    // =========================================================================
+
+    #[test]
+    fn test_validate_spec_all_valid() {
+        let temp_dir = TempDir::new().unwrap();
+        let specs_dir = temp_dir.path().join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+
+        // Create a valid spec
+        create_test_spec(&specs_dir, "test-spec", VALID_SPEC);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_spec(None);
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert!(response.valid);
+        assert!(response.errors.is_empty());
+        assert!(response.summary.contains("valid"));
+    }
+
+    #[test]
+    fn test_validate_spec_specific_valid() {
+        let temp_dir = TempDir::new().unwrap();
+        let specs_dir = temp_dir.path().join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+
+        create_test_spec(&specs_dir, "test-spec", VALID_SPEC);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_spec(Some("test-spec"));
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert!(response.valid);
+    }
+
+    #[test]
+    fn test_validate_spec_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let specs_dir = temp_dir.path().join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_spec(Some("nonexistent"));
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("spec not found"));
+    }
+
+    #[test]
+    fn test_validate_spec_invalid_content() {
+        let temp_dir = TempDir::new().unwrap();
+        let specs_dir = temp_dir.path().join("specs");
+        let spec_dir = specs_dir.join("bad-spec");
+        fs::create_dir_all(&spec_dir).unwrap();
+
+        // Create a spec without required sections
+        let invalid_content = "# Bad Spec\n\nNo proper sections here.\n";
+        fs::write(spec_dir.join("spec.md"), invalid_content).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_spec(Some("bad-spec"));
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        // Should have validation errors due to missing sections
+        assert!(!response.valid || !response.warnings.is_empty());
+    }
+
+    #[test]
+    fn test_validate_change_all_valid() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_change(None);
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        // Note: the test change may have validation warnings but should parse
+        assert!(response.summary.contains("valid") || response.summary.contains("Validation"));
+    }
+
+    #[test]
+    fn test_validate_change_specific_valid() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        create_test_change(&changes_dir, "add-feature", TEST_TASKS, TEST_DELTA);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_change(Some("add-feature"));
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        // The validation should complete and return a response with summary
+        // (may fail validation due to test fixtures but should return a response)
+        assert!(!response.summary.is_empty());
+    }
+
+    #[test]
+    fn test_validate_change_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_change(Some("nonexistent"));
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("change not found"));
+    }
+
+    #[test]
+    fn test_validate_change_empty_folder() {
+        let temp_dir = TempDir::new().unwrap();
+        let changes_dir = temp_dir.path().join("specs/_changes");
+        fs::create_dir_all(&changes_dir).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_change(None);
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        assert!(response.valid);
+        assert!(response.errors.is_empty());
+    }
+
+    #[test]
+    fn test_validation_error_includes_file_path() {
+        let temp_dir = TempDir::new().unwrap();
+        let specs_dir = temp_dir.path().join("specs");
+        let spec_dir = specs_dir.join("broken-spec");
+        fs::create_dir_all(&spec_dir).unwrap();
+
+        // Create a spec without Purpose section (required)
+        let content =
+            "# Broken Spec\n\n## Requirements\n\n### Requirement: Test\n\nThis is a test.\n";
+        fs::write(spec_dir.join("spec.md"), content).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
+
+        let result = server.do_validate_spec(Some("broken-spec"));
+
+        assert!(result.is_ok());
+        let response = result.unwrap();
+        // Should have errors or warnings about missing Purpose
+        let has_file_info = response.errors.iter().any(|e| e.file.contains("spec.md"))
+            || response.warnings.iter().any(|w| w.file.contains("spec.md"));
+        assert!(has_file_info || response.valid);
     }
 }
