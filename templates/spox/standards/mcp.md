@@ -2,15 +2,40 @@
 
 ### Rules
 
-**Priority:** Serena (code) → Context7 (docs) → text tools (fallback only)
+**Priority:** Spox (specs) → Serena (code) → Context7 (docs) → text tools (fallback only)
 
-1. **Serena first** for code navigation, understanding, editing
-2. **Context7 first** for library/API documentation
-3. **Symbolic editing** over read/edit/write cycles
-4. **Check onboarding** before first Serena use on any project
+1. **Spox first** for spec and change operations
+2. **Serena first** for code navigation, understanding, editing
+3. **Context7 first** for library/API documentation
+4. **Symbolic editing** over read/edit/write cycles
 5. **Text tools** only when MCP tools unavailable
 6. **Never assume** library behavior—verify with Context7
 7. **Never pattern-match** code—use Serena's semantic understanding
+
+### Spox MCP
+
+Spec and change management. **Always use for** spec operations—never use CLI commands or direct file manipulation.
+
+#### Tool Reference
+
+| Task                  | Tool                     | Description                                      |
+|-----------------------|--------------------------|--------------------------------------------------|
+| List all specs        | `list_specs`             | List all capability specs in the project         |
+| Get spec requirements | `get_spec_requirements`  | Retrieve requirements from a specific spec       |
+| Get scenario details  | `get_scenario`           | Get details of a specific scenario               |
+| List changes          | `list_changes`           | List all active change proposals                 |
+| Get change details    | `get_change`             | Retrieve full details of a change proposal       |
+| Search specs          | `search_specs`           | Full-text search across all specs and changes    |
+| Validate spec         | `validate_spec`          | Validate a spec file for correctness             |
+| Validate change       | `validate_change`        | Validate a change proposal before approval       |
+
+#### Workflow
+
+```
+Explore → list_specs, list_changes, search_specs
+Understand → get_spec_requirements, get_scenario, get_change
+Validate → validate_spec, validate_change
+```
 
 ### Serena MCP
 

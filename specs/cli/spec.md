@@ -46,6 +46,23 @@ The CLI SHALL reject unknown commands with helpful feedback.
 - AND include a usage hint
 - AND exit with non-zero code
 
+### Requirement: CLI as Interface Layer
+
+The CLI SHALL act as a presentation layer that formats Core output for terminal display.
+
+#### Scenario: CLI delegates to Core
+
+- **WHEN** any CLI command is executed
+- **THEN** it calls the appropriate Core function
+- **AND** it formats the Core response for terminal output
+- **AND** it does not contain business logic
+
+#### Scenario: CLI handles errors from Core
+
+- **WHEN** a Core function returns an error
+- **THEN** the CLI formats the error for terminal display
+- **AND** exits with appropriate exit code
+
 ### Requirement: Subcommand structure
 
 The CLI SHALL accept the resource-verb pattern for operations.
@@ -70,6 +87,19 @@ The CLI SHALL accept the resource-verb pattern for operations.
 - THEN print config subcommand usage
 - AND list actions: show
 - AND exit with code 0
+
+#### Scenario: MCP subcommand exists
+
+- **WHEN** `spox mcp --help` is executed
+- **THEN** print MCP subcommand usage
+- **AND** list actions: serve
+- **AND** exit with code 0
+
+#### Scenario: Index subcommand exists
+
+- **WHEN** `spox index --help` is executed
+- **THEN** print index subcommand usage
+- **AND** exit with code 0
 
 #### Scenario: Spec validate accepts optional ID
 
@@ -118,6 +148,56 @@ The CLI SHALL accept the resource-verb pattern for operations.
 - **AND** validate that all referenced system templates exist
 - **AND** report clear error messages for invalid configuration
 
+### Requirement: MCP Subcommand
+
+The CLI SHALL provide `spox mcp serve` to start an MCP server over stdio transport.
+
+#### Scenario: MCP subcommand exists
+
+- **WHEN** `spox mcp --help` is executed
+- **THEN** print MCP subcommand usage
+- **AND** list actions: serve
+- **AND** exit with code 0
+
+#### Scenario: Start MCP server
+
+- **WHEN** `spox mcp serve` is executed
+- **THEN** an MCP server starts listening on stdin/stdout
+- **AND** the server exposes spec tools (`list_specs`, `get_spec_requirements`, `get_scenario`, `search_specs`)
+- **AND** the server remains running until stdin closes or interrupt signal received
+
+#### Scenario: Claude Code can start server
+
+- **WHEN** Claude Code is configured with spox MCP server
+- **AND** Claude Code starts
+- **THEN** spox MCP server is launched via `spox mcp serve`
+- **AND** Claude Code can call spox tools
+
+### Requirement: Index Subcommand
+
+The CLI SHALL provide `spox index` to build or rebuild the semantic search index.
+
+#### Scenario: Build index
+
+- **WHEN** `spox index` is executed
+- **THEN** all specs are parsed using Core
+- **AND** Core generates embeddings for spec purposes and requirement descriptions
+- **AND** the index is saved to `.spox/search_index.bin`
+- **AND** progress is displayed during embedding generation
+
+#### Scenario: Index with no specs
+
+- **WHEN** `spox index` is executed
+- **AND** no spec files exist
+- **THEN** an empty index is created
+- **AND** a warning is displayed
+
+#### Scenario: Index rebuild
+
+- **WHEN** `spox index` is executed
+- **AND** an index already exists
+- **THEN** the existing index is replaced with a new one
+
 ### Requirement: Spec List Command
 
 The CLI SHALL list all specs with their requirement counts when `spox spec list` is executed.
@@ -125,7 +205,8 @@ The CLI SHALL list all specs with their requirement counts when `spox spec list`
 #### Scenario: List specs in initialized project
 
 - **WHEN** `spox spec list` is executed in an initialized project
-- **THEN** print "Specs:" as the first line
+- **THEN** call Core to parse all specs
+- **AND** print "Specs:" as the first line
 - **AND** print each spec on a separate line prefixed with "- "
 - **AND** each line shows the spec name and requirement count
 - **AND** format is `- {name}  {count} requirements` with aligned columns
@@ -151,7 +232,8 @@ The CLI SHALL list all active changes with their task progress when `spox change
 #### Scenario: List changes in initialized project
 
 - **WHEN** `spox change list` is executed in an initialized project
-- **THEN** print "Changes:" as the first line
+- **THEN** call Core to parse all changes
+- **AND** print "Changes:" as the first line
 - **AND** print each active change on a separate line prefixed with "- "
 - **AND** each line shows the change name and task progress
 - **AND** format is `- {name}  {completed}/{total} tasks` with aligned columns
@@ -197,7 +279,8 @@ The CLI SHALL provide `spox spec show <id>` to display a spec's content.
 #### Scenario: Show specific spec
 
 - **WHEN** `spox spec show <id>` is executed with a valid spec ID
-- **THEN** display the spec's purpose section
+- **THEN** call Core to get the parsed spec
+- **AND** display the spec's purpose section
 - **AND** display each requirement with its description
 - **AND** list scenarios under each requirement
 - **AND** use colored output for readability
@@ -216,7 +299,8 @@ The CLI SHALL provide `spox change show <id>` to display a change proposal.
 #### Scenario: Show specific change
 
 - **WHEN** `spox change show <id>` is executed with a valid change ID
-- **THEN** display the proposal's Why section
+- **THEN** call Core to get the parsed change
+- **AND** display the proposal's Why section
 - **AND** display the proposal's What Changes section
 - **AND** display task completion with progress bar
 - **AND** display deltas grouped by capability
@@ -226,7 +310,8 @@ The CLI SHALL provide `spox change show <id>` to display a change proposal.
 #### Scenario: Show change deltas only
 
 - **WHEN** `spox change show <id> --deltas-only` is executed
-- **THEN** display only the delta requirements
+- **THEN** call Core to get the parsed change
+- **AND** display only the delta requirements
 - **AND** group by capability
 - **AND** show operation type (ADDED/MODIFIED/REMOVED/RENAMED)
 - **AND** show requirement names and descriptions
@@ -237,4 +322,3 @@ The CLI SHALL provide `spox change show <id>` to display a change proposal.
 - **WHEN** `spox change show <id>` is executed with an invalid change ID
 - **THEN** print an error message indicating change not found
 - **AND** exit with code 1
-

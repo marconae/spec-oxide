@@ -29,11 +29,15 @@ $ARGUMENTS
 
 Before proposing anything, know what exists:
 
-```bash
-spox config show      # Get authoritative paths
-spox spec list        # See existing capabilities
-spox change list      # Check for in-progress changes that might conflict
-```
+**Use Spox MCP tools:**
+
+- `mcp__spox__list_specs` — List all specs with ID, title, purpose
+- `mcp__spox__list_changes` — Check for in-progress changes that might conflict
+- `mcp__spox__search_specs` — Find relevant specs semantically
+- `mcp__spox__get_spec_requirements` — Explore specific spec requirements
+
+**Important** Use `mcp__spox__search_specs` to search before loading all specs into the context. The search helps to
+find relevant specs and avoid loading unnecessary data.
 
 ### 2. Choose a Change ID
 
@@ -60,14 +64,38 @@ Create `specs/_changes/<change-id>/` with:
 that needs resolution before coding.
 
 **Always use these file templates for scaffolding:**
-* `.spox/specs/change/proposal.md`
-* `.spox/specs/change/tasks.md`
-* `.spox/specs/change/design.md` (if needed)
-* `.spox/specs/change/spec.md`
 
-### 4. Write Spec Deltas
+* `.spox/templates/change/proposal.md`
+* `.spox/templates/change/tasks.md`
+* `.spox/templates/change/design.md` (if needed)
+* `.spox/templates/change/spec.md`
 
-Place deltas in `specs/_changes/<change-id>/specs/<capability>/spec.md`.
+### 4. Identify All Affected Capabilities
+
+**Before writing any deltas**, analyze the change to identify ALL capabilities that will be affected.
+
+Use `mcp__spox__list_specs` and `mcp__spox__search_specs` to find capabilities related to the change. Ask yourself:
+
+- Which existing specs need MODIFIED or REMOVED requirements?
+- Does this change introduce a NEW capability (new spec)?
+- Does this change touch multiple systems (auth, notifications, API, etc.)?
+
+**Create one delta file per affected capability:** `specs/_changes/<change-id>/specs/<capability>/spec.md`
+
+Example for a change affecting two capabilities:
+
+```
+specs/_changes/add-2fa-notify/
+└── specs/
+    ├── auth/
+    │   └── spec.md       # ADDED: Two-Factor Authentication
+    └── notifications/
+        └── spec.md       # ADDED: OTP Email Notification
+```
+
+### 5. Write Spec Deltas
+
+For each affected capability, create a delta in `specs/_changes/<change-id>/specs/<capability>/spec.md`.
 
 ```markdown
 ## ADDED Requirements
@@ -89,8 +117,9 @@ Users SHALL provide a second factor during login.
 - Every requirement needs at least one `#### Scenario:` (4 hashes, not bullets)
 - Use SHALL/MUST for normative requirements
 - For MODIFIED: paste the *complete* existing requirement, then edit
+- **One delta file per capability**—never combine capabilities in a single spec.md
 
-### 5. Write Tasks
+### 6. Write Tasks
 
 Create `tasks.md` with ordered, verifiable work items:
 
@@ -107,14 +136,14 @@ Create `tasks.md` with ordered, verifiable work items:
 - [ ] 2.2 Integration tests for login flow
 ```
 
-Mark dependencies and parallelizable work where relevant. 
+Mark dependencies and parallelizable work where relevant.
 Callout important notes and hints in the "## Notes" section.
 
-### 6. Validate
+### 7. Validate
 
-```bash
-spox change validate
-```
+**Use Spox MCP tool:**
+
+- `mcp__spox__validate_change` — Validate change proposal structure and content
 
 Fix all issues before sharing.
 
@@ -125,19 +154,14 @@ When complete, you will have:
 ```
 specs/_changes/<change-id>/
 ├── proposal.md           # Why + what + impact
-├── tasks.md              # Implementation checklist  
+├── tasks.md              # Implementation checklist
 ├── design.md             # (if needed) Technical decisions
 └── specs/
-    └── <capability>/
-        └── spec.md       # Delta specs with scenarios
+    ├── <capability-1>/
+    │   └── spec.md       # Delta specs for first affected capability
+    ├── <capability-2>/
+    │   └── spec.md       # Delta specs for second affected capability
+    └── ...               # One folder per affected capability
 ```
 
 **Do not implement.** Share the proposal and wait for approval.
-
-## Quick Reference
-
-```bash
-spox change show <id>                   # View your proposal
-spox change show <id> --deltas-only     # Debug parsing issues
-rg -n "Requirement:" specs              # Search existing requirements
-```

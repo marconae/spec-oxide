@@ -18,6 +18,7 @@ If not prompted otherwise, review the entire codebase.
 1. Be constructive and provide specific examples with file paths and line numbers.
 2. Prioritize findings by severity before presenting recommendations.
 3. Keep review focused on actionable improvements.
+4. Use Spox MCP tools to discover specs and understand requirements.
 
 ## Severity Prioritization
 

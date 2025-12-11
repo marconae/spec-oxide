@@ -1,4 +1,10 @@
-## ADDED Requirements
+# core Specification
+
+## Purpose
+
+Define the Core layer that contains all business logic for Spec Oxide, independent of any interface (CLI, MCP). The Core provides structured data and functions that both CLI and MCP layers delegate to.
+
+## Requirements
 
 ### Requirement: Core Layer Architecture
 

@@ -5,6 +5,9 @@ category: Spec Oxide
 tags: [ spox, implement ]
 ---
 
+You are the **orchestrator**. You read specs, spawn subagents, track progress, and enforce guardrails. Subagents do the
+implementation work.
+
 ## Goal
 
 **Build exactly what was approved—nothing more, nothing less.**
@@ -15,15 +18,14 @@ is to execute the tasks and keep `tasks.md` in sync with reality.
 The user provides approved change IDs (e.g., `add-two-factor-auth`) either directly in the prompt or as a list. Only
 implement changes that have been explicitly approved.
 
-If unclear, ask the user for confirmation before proceeding. Run `spox change list` to see active proposals and make
-suggestions.
+If unclear, ask the user for confirmation before proceeding. Use `mcp__spox__list_changes` to see active proposals and
+make suggestions.
 
 ## Guardrails
 
 - **Approved changes only.** Do not implement proposals that haven't been approved.
 - **Follow the spec.** The proposal and spec deltas are the contract—implement what they describe.
 - **Respect the scope.** Don't add features or "improvements" beyond what's specified.
-- **Keep tasks current.** Update `tasks.md` to reflect actual progress, but do not summarize the work (this is done by the verifier)
 
 ## Steps
 
@@ -31,31 +33,33 @@ suggestions.
 
 Get the change ID(s) from the user. If not provided, ask:
 
-> Which approved change(s) should I implement? Run `spox change list` to see active proposals.
+> Which approved change(s) should I implement? Use `mcp__spox__list_changes` to see active proposals.
 
 Verify each change exists and is ready:
 
-```bash
-spox change show <id>
-```
+**Use Spox MCP tool:**
+
+- `mcp__spox__get_change` with `change_id` parameter — Get full change proposal content
 
 ### 2. Understand the Change
 
-For each approved change, read in order:
+The `mcp__spox__get_change` tool returns a JSON object with these fields:
 
-1. `proposal.md` — Why this change exists, what's the impact
-2. `design.md` — Technical decisions (if present)
-3. `tasks.md` — The implementation checklist
-4. `spec.md` deltas for each capability — What exactly is changing
+- `proposal`- Why this change exists, what's the impact
+- `tasks` - The implementation checklist
+- `design` - Technical decisions (if present, may be null)
+- `deltas` - Object keyed by capability name with parsed spec changes
+
+Review in order: `proposal` → `design` (if present) → `deltas` → `tasks`
 
 Confirm scope matches what was approved before proceeding.
 
 ### 3. Implement Tasks
 
-Work through `tasks.md` systematically:
+Work through the fetched tasks list systematically:
 
 - **Parallelize** independent tasks by spawning `spox-implementer` subagents
-- **Sequence** dependent tasks as outlined in `tasks.md`
+- **Sequence** dependent tasks as outlined in fetched tasks list
 - **Stay focused** on one task at a time per subagent
 
 ### 4. Track Progress
@@ -63,8 +67,9 @@ Work through `tasks.md` systematically:
 After each task completes:
 
 - Verify the work matches the spec
-- Mark the task `- [x]` in `tasks.md`
+- Mark the task `- [x]` in `specs/_changes/<id>/tasks.md`
 - Note any blockers or deviations
+- Do not summarize progress in `tasks.md`
 
 ### 5. Verify Completion
 
@@ -83,15 +88,3 @@ When complete:
 - Verification report confirms correctness
 
 **Do not archive.** The user will trigger archiving after deployment.
-
-## Quick Reference
-
-```bash
-spox change list          # List active changes
-spox change show <id>     # View proposal, tasks, specs
-```
-
-## Role
-
-You are the **orchestrator**. You read specs, spawn subagents, track progress, and enforce guardrails. Subagents do the
-implementation work.
