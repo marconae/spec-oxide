@@ -1,6 +1,6 @@
-# Setup Guide | Spec Oxide
+# Setup Guide
 
-> Get up and running in a couple minutes-no additional API keys required.
+> Get up and running in a couple minutes—no additional API keys required.
 
 This guide walks you through installation, first-time configuration, and updating your project.
 
@@ -17,7 +17,11 @@ spox init
 # 3. Set up MCP servers
 .spox/setup.sh
 
-# 4. Run claude code
+# 4. Enable project MCP servers in Claude Code settings
+# Add to .claude/settings.json:
+# "enableAllProjectMcpServers": true
+
+# 5. Run Claude Code
 claude
 ```
 
@@ -27,8 +31,8 @@ claude
 |-----------------|----------------------|----------------------------------------------------------------------|
 | **Cargo**       | Build the `spox` CLI | [rustup.rs](https://rustup.rs/)                                      |
 | **Claude Code** | AI coding assistant  | [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code) |
+| **jq**          | JSON manipulation    | `brew install jq` / `apt install jq`                                 |
 | **uv**          | Serena MCP server    | [docs.astral.sh/uv](https://docs.astral.sh/uv/)                      |
-| **Node.js 18+** | Context7 MCP server  | [nodejs.org](https://nodejs.org/)                                    |
 
 **Platform Support:**
 
@@ -41,7 +45,13 @@ claude
 Use Cargo to install the `spox` CLI:
 
 ```bash
-cargo install --git https://github.com/anthropics/spec-oxide
+cargo install --git https://github.com/marconae/spec-oxide
+```
+
+Verify installation:
+
+```bash
+spox --version
 ```
 
 ## Step 2: Initialize Your Project
@@ -57,19 +67,20 @@ This creates:
 
 ```
 your-project/
+├── .mcp.json             # MCP server configuration
 ├── .spox/
-│   ├── config.toml      # Configuration
-│   ├── setup.sh         # MCP setup script
-│   ├── custom/          # Your custom rules
-│   └── templates/       # Spec templates
+│   ├── config.toml       # Spox configuration
+│   ├── setup.sh          # MCP setup script
+│   ├── custom/           # Your custom rules
+│   └── templates/        # Spec templates
 ├── .claude/
-│   ├── agents/          # AI agents (implementer, reviewer, verifier)
-│   ├── commands/spox/   # Slash commands (propose, implement, archive)
-│   └── CLAUDE.md        # Generated instructions for Claude
+│   ├── agents/           # AI agents (implementer, reviewer, verifier)
+│   ├── commands/spox/    # Slash commands (propose, implement, archive, vibe)
+│   └── CLAUDE.md         # Generated instructions for Claude
 └── specs/
-    ├── mission.md       # Project mission (edit this!)
-    ├── _changes/        # Active proposals
-    └── _archive/        # Completed changes
+    ├── mission.md        # Project mission (edit this!)
+    ├── _changes/         # Active proposals
+    └── _archive/         # Completed changes
 ```
 
 **First thing to do:** Edit `specs/mission.md` to describe your project's purpose, tech stack, and conventions.
@@ -84,19 +95,45 @@ Run the interactive setup script:
 
 The script will:
 
-1. ✓ Check prerequisites (Claude Code, uv, Node.js)
-2. ✓ Install Serena MCP (semantic code operations)
-3. ✓ Install Context7 MCP (documentation lookups)
-4. ✓ Index your project for Serena
+1. ✓ Check prerequisites (jq, uv)
+2. ✓ Configure Spox MCP (built-in, always enabled)
+3. ✓ Configure Serena MCP (semantic code operations)
+4. ✓ Configure Context7 MCP (documentation lookups)
+5. ✓ Index your project for Serena (optional)
+
+All configuration is stored in `.mcp.json` at your project root.
 
 **What are MCP servers?**
 
 | Server       | Purpose                                                                        |
 |--------------|--------------------------------------------------------------------------------|
+| **Spox**     | Lists, searches, and validates specs and changes                               |
 | **Serena**   | Understands your code semantically — find symbols, references, refactor safely |
 | **Context7** | Provides up-to-date library docs — no more outdated API assumptions            |
 
-Both are required for the full Spec Oxide workflow.
+See the [MCP Servers Guide](mcp.md) for detailed tool references and usage.
+
+## Step 4: Enable Project MCP Servers
+
+Claude Code must be configured to load project-level MCP servers. Add this to your Claude Code settings:
+
+**Option A: Project settings** (`.claude/settings.json`):
+
+```json
+{
+  "enableAllProjectMcpServers": true
+}
+```
+
+**Option B: Global settings** (`~/.claude/settings.json`):
+
+```json
+{
+  "enableAllProjectMcpServers": true
+}
+```
+
+Without this setting, the MCP servers defined in `.mcp.json` will not be loaded.
 
 ## Updating an Existing Project
 
@@ -113,6 +150,12 @@ This will:
 - Preserve your custom rules in `.spox/custom/`
 - Regenerate `.claude/CLAUDE.md` with current templates
 
+After updating, re-run the setup script to ensure MCP configuration is current:
+
+```bash
+.spox/setup.sh
+```
+
 ## Troubleshooting
 
 ### "command not found: spox"
@@ -125,11 +168,12 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 Add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.).
 
-### MCP servers not working
+### MCP servers not loading
 
-1. Verify `.mcp.json` exists and is valid: `cat .mcp.json | jq`
-2. Verify jq is installed: `jq --version`
-3. Re-run setup: `.spox/setup.sh`
+1. Verify `enableAllProjectMcpServers` is set to `true` in Claude Code settings
+2. Verify `.mcp.json` exists and is valid: `cat .mcp.json | jq`
+3. Check MCP server status in Claude Code: `/mcp`
+4. Re-run setup: `.spox/setup.sh`
 
 ### Serena not finding symbols
 
@@ -139,21 +183,25 @@ Index your project:
 uvx --from git+https://github.com/oraios/serena serena project index
 ```
 
-## Next Steps
+### jq not found
 
-1. **Read the workflow** — Understand [Propose → Implement → Archive](user-guide.md#workflow)
-2. **Edit your mission** — Customize `specs/mission.md` for your project
-3. **Create your first proposal** — Run `/spox:propose` with a real task
-4. **Explore the CLI** — See all commands with `spox --help`
-
-Ready to dive deeper? See the full [User Guide](user-guide.md).
-
-## Appendix
-
-### Build from Source
+Install jq (required for the setup script):
 
 ```bash
-git clone https://github.com/anthropics/spec-oxide.git
+# macOS
+brew install jq
+
+# Ubuntu/Debian
+sudo apt-get install jq
+
+# Fedora
+sudo dnf install jq
+```
+
+## Build from Source
+
+```bash
+git clone https://github.com/marconae/spec-oxide.git
 cd spec-oxide
 cargo build --release
 cargo install --path .
