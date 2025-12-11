@@ -76,37 +76,29 @@ The `spox init` command SHALL copy Claude Code agent and command templates from 
 
 #### Scenario: Claude Code agents copied
 
-- **WHEN** initialization or update completes successfully
-- **THEN** all files from `templates/claude/agents/` exist in `.claude/agents/` (flat, not in subfolder)
-- **AND** agent files retain their `spox-` prefix (e.g., `spox-implementer.md`)
-- **AND** existing spox agent files are overwritten with latest templates
+- **WHEN** `spox init` is run
+- **THEN** all agent templates from `templates/claude/agents/` SHALL be copied to `.claude/agents/`
 
 #### Scenario: Claude Code commands copied
 
-- **WHEN** initialization or update completes successfully
-- **THEN** all command templates exist in `.claude/commands/spox/`
-- **AND** command files include `propose.md`, `implement.md`, `archive.md`, and `vibe.md`
-- **AND** existing spox command files are overwritten with latest templates
+- **WHEN** `spox init` is run
+- **THEN** all command templates from `templates/claude/commands/` SHALL be copied to `.claude/commands/`
+- **AND** the setup command template SHALL be copied to `.claude/commands/spox/setup.md`
 
 #### Scenario: Mission template copied only on fresh init
 
-- **WHEN** initialization completes successfully on a fresh project
-- **THEN** `specs/mission.md` exists with content from `templates/specs/mission.md`
+- **WHEN** `spox init` is run on a fresh project without `specs/mission.md`
+- **THEN** the mission template SHALL be copied to `specs/mission.md`
 
 #### Scenario: Mission template preserved on update
 
-- **WHEN** update runs on existing project with `specs/mission.md`
-- **THEN** existing `specs/mission.md` is not modified
+- **WHEN** `spox init` is run on an existing project with `specs/mission.md`
+- **THEN** the existing `specs/mission.md` SHALL be preserved
 
 #### Scenario: Spec templates copied to .spox/templates
 
-- **WHEN** initialization or update completes successfully
-- **THEN** `.spox/templates/` directory exists with spec and change templates
-- **AND** `.spox/templates/spec.md` contains the spec template
-- **AND** `.spox/templates/change/` contains change templates (proposal.md, tasks.md, design.md, spec.md, verification.md)
-- **AND** `.spox/specs/` directory does NOT exist (renamed to templates)
-- **AND** `.spox/standards/` directory does NOT exist
-- **AND** `.spox/workflow.md` does NOT exist
+- **WHEN** `spox init` is run
+- **THEN** spec templates SHALL be copied to `.spox/templates/`
 
 ### Requirement: Environment Setup Script
 
