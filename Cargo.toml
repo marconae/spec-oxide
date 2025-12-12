@@ -4,6 +4,7 @@ version = "0.3.0"
 authors = ["Marco Nätlitz"]
 edition = "2021"
 description = "Spec-driven development for humans and AI"
+homepage = "https://marconae.github.io/spec-oxide/"
 license = "MIT"
 
 [[bin]]
