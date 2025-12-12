@@ -1,5 +1,5 @@
 <p align="center" style="background-color: white">
-  <img src="docs/assets/spox-logo-light.svg" alt="Spec Oxide" width="300">
+  <img src="https://marconae.github.io/spec-oxide/assets/spox-logo-light.svg" alt="Spec Oxide" width="300">
 </p>
 
 # Spec Oxide
@@ -23,7 +23,7 @@ agree on *what* to build before any code is written.
 
 Spec Oxide ships with a built-in MCP server that enables agents to list and search specs.
 
-![Spox Oxide MCP Search](docs/assets/cc-search-spec-mcp.png)
+![Spox Oxide MCP Search](https://marconae.github.io/spec-oxide/assets/cc-search-spec-mcp.png)
 
 The built-in MCP server is designed to optimize the context window and minimize token waste.
 
@@ -41,7 +41,7 @@ Spec Oxide maintains an up-to-date `CLAUDE.md` file that includes:
 
 Spec Oxide ships with a simple CLI that helps you manage specs and track changes:
 
-![Spox Oxide CLI](docs/assets/cli-show-screenshot.png)
+![Spox Oxide CLI](https://marconae.github.io/spec-oxide/assets/cli-show-screenshot.png)
 
 ## Get started in minutes—no extra API keys required
 
@@ -66,7 +66,7 @@ claude
 
 ## Next steps
 
-<img src="docs/assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
+<img src="https://marconae.github.io/spec-oxide/assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
 
 1. **Read the workflow** — Understand [Propose → Implement → Archive](https://marconae.github.io/spec-oxide/#/workflow)
 2. **Edit your mission** — Run `/spox:setup` and define your `specs/mission.md` for your project
