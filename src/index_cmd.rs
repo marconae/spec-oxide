@@ -51,6 +51,7 @@ pub fn run() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::fs;
     use tempfile::TempDir;
 
@@ -117,6 +118,7 @@ The system SHALL provide basic {} features.
 
     #[test]
     #[ignore]
+    #[serial]
     fn test_run_with_specs() {
         let temp_dir = create_test_environment();
         create_test_spec(temp_dir.path(), "auth");
@@ -140,6 +142,7 @@ The system SHALL provide basic {} features.
 
     #[test]
     #[ignore]
+    #[serial]
     fn test_run_with_no_specs() {
         let temp_dir = create_test_environment();
 

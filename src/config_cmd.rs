@@ -74,11 +74,13 @@ pub fn run_show(paths_only: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::env;
     use std::fs;
     use tempfile::TempDir;
 
     #[test]
+    #[serial]
     fn test_run_show_config_not_found() {
         // Create a temporary directory and change to it
         let temp_dir = TempDir::new().unwrap();
@@ -92,10 +94,11 @@ mod tests {
         let restore_result = env::set_current_dir(&original_dir);
 
         assert!(result.is_err());
-        let _ = restore_result; // Ignore restore errors in parallel test execution
+        let _ = restore_result;
     }
 
     #[test]
+    #[serial]
     fn test_run_show_success() {
         // Create a temporary directory with .spox/config.toml
         let temp_dir = TempDir::new().unwrap();
@@ -123,10 +126,11 @@ system = ["mcp"]
         let restore_result = env::set_current_dir(&original_dir);
 
         assert!(result.is_ok());
-        let _ = restore_result; // Ignore restore errors in parallel test execution
+        let _ = restore_result;
     }
 
     #[test]
+    #[serial]
     fn test_run_show_paths_only() {
         // Create a temporary directory with .spox/config.toml
         let temp_dir = TempDir::new().unwrap();
@@ -155,10 +159,11 @@ custom = ["my-rules.md"]
         let restore_result = env::set_current_dir(&original_dir);
 
         assert!(result.is_ok());
-        let _ = restore_result; // Ignore restore errors in parallel test execution
+        let _ = restore_result;
     }
 
     #[test]
+    #[serial]
     fn test_run_show_full_config_with_rules() {
         // Create a temporary directory with .spox/config.toml
         let temp_dir = TempDir::new().unwrap();
@@ -187,10 +192,11 @@ custom = ["project-rules.md", "team-rules.md"]
         let restore_result = env::set_current_dir(&original_dir);
 
         assert!(result.is_ok());
-        let _ = restore_result; // Ignore restore errors in parallel test execution
+        let _ = restore_result;
     }
 
     #[test]
+    #[serial]
     fn test_run_show_validation_error_empty_system() {
         // Create a temporary directory with invalid config
         let temp_dir = TempDir::new().unwrap();
@@ -218,10 +224,11 @@ system = []
         let restore_result = env::set_current_dir(&original_dir);
 
         assert!(result.is_err());
-        let _ = restore_result; // Ignore restore errors in parallel test execution
+        let _ = restore_result;
     }
 
     #[test]
+    #[serial]
     fn test_run_show_validation_error_invalid_template() {
         // Create a temporary directory with invalid config
         let temp_dir = TempDir::new().unwrap();
@@ -249,6 +256,6 @@ system = ["mcp", "invalid-template"]
         let restore_result = env::set_current_dir(&original_dir);
 
         assert!(result.is_err());
-        let _ = restore_result; // Ignore restore errors in parallel test execution
+        let _ = restore_result;
     }
 }
