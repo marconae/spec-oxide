@@ -65,16 +65,16 @@ claude
 
 ## Next steps
 
-<img src="docs/assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
+<img src="assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
 
-1. **Read the workflow** — Understand [Propose → Implement → Archive](docs/)
+1. **Read the workflow** — Understand [Propose → Implement → Archive](workflow.md)
 2. **Edit your mission** — Run `/spox:setup` and define your `specs/mission.md` for your project
 3. **Create your first proposal** — Run `/spox:propose` with a real task
 4. **Implement your first proposal**  — Run `/spox:implement` and start shipping
 
-Ready to dive deeper? See the full [User Guide](docs/).
-
 ## Acknowledgements
+
+Spec Oxide is inspired by:
 
 - **[buildermethods/agent-os](https://github.com/buildermethods/agent-os)** - CC Spec-Driven inspiration
 - **[maxritter/claude-codepro](https://github.com/maxritter/claude-codepro)** - CC Spec-Driven inspiration
@@ -86,4 +86,4 @@ Built with ❤️ and Rust!
 
 ## License
 
-See [LICENSE](LICENSE) file.
+MIT. See [LICENSE](https://github.com/marconae/spec-oxide/LICENSE) file.
