@@ -44,7 +44,7 @@ Spec Oxide ships with a simple CLI that helps you manage specs and track changes
 
 ## Get started in minutes—no extra API keys required
 
-For setup and update instructions read the [Setup Guide](docs/setup.md). Setup takes just a couple of minutes.
+For setup and update instructions read the [Setup Guide](setup.md). Setup takes just a couple of minutes.
 Besides Claude Code, there are no additional API keys required.
 
 ```bash
