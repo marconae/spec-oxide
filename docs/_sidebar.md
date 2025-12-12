@@ -3,6 +3,7 @@
 - **Getting Started**
   - [Setup Guide](setup.md)
   - [Workflow](workflow.md)
+  - [Enforced Rules](rules.md)
 
 - **Reference**
   - [CLI Guide](cli.md)
