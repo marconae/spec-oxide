@@ -128,8 +128,8 @@ The system SHALL provide basic {} features.
 
         let result = run();
 
-        // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        // Restore original directory (ignore errors in parallel test execution)
+        let _ = std::env::set_current_dir(original_dir);
 
         assert!(result.is_ok(), "Expected Ok, got {:?}", result);
 
@@ -149,8 +149,8 @@ The system SHALL provide basic {} features.
 
         let result = run();
 
-        // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
+        // Restore original directory (ignore errors in parallel test execution)
+        let _ = std::env::set_current_dir(original_dir);
 
         // Should succeed with warning (empty index created)
         assert!(result.is_ok(), "Expected Ok, got {:?}", result);
