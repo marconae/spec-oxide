@@ -34,7 +34,8 @@ Spec Oxide maintains an up-to-date `CLAUDE.md` file that includes:
 * Proven coding standards for backend, frontend, testing and verification
 * Enforcement of test-driven development and clean code practices
 * Instructions on how to use the built-in MCP server
-* Pre-configured flows for [Serena](https://github.com/oraios/seren) MCP and [Context7](https://github.com/context7/context7)
+* Pre-configured flows for [Serena](https://github.com/oraios/seren) MCP
+  and [Context7](https://github.com/context7/context7)
 
 ### 📺 Track Specifications and Changes with a simple CLI
 
@@ -44,8 +45,8 @@ Spec Oxide ships with a simple CLI that helps you manage specs and track changes
 
 ## Get started in minutes—no extra API keys required
 
-For setup and update instructions read the [Setup Guide](docs/setup.md). Setup takes just a couple of minutes.
-Besides Claude Code, there are no additional API keys required.
+For setup and update instructions read the [Setup Guide](https://marconae.github.io/spec-oxide/#/setup). Setup takes
+just a couple of minutes. Besides Claude Code, there are no additional API keys required.
 
 ```bash
 # Setup
@@ -67,7 +68,7 @@ claude
 
 <img src="docs/assets/spox-overview.svg" alt="Spec Oxide Workflow" width="700">
 
-1. **Read the workflow** — Understand [Propose → Implement → Archive](https://marconae.github.io/spec-oxide)
+1. **Read the workflow** — Understand [Propose → Implement → Archive](https://marconae.github.io/spec-oxide/#/workflow)
 2. **Edit your mission** — Run `/spox:setup` and define your `specs/mission.md` for your project
 3. **Create your first proposal** — Run `/spox:propose` with a real task
 4. **Implement your first proposal**  — Run `/spox:implement` and start shipping
@@ -82,7 +83,6 @@ Ready to dive deeper? See the full [User Guide](https://marconae.github.io/spec-
 - **[context7/context7](https://github.com/context7/context7)** - MCP for up-to-date docs for external libraries
 
 Built with ❤️ and Rust!
-
 
 ## License
 
