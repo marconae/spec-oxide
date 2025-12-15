@@ -23,7 +23,7 @@ agree on *what* to build before any code is written.
 
 Spec Oxide ships with a built-in MCP server that enables agents to list and search specs.
 
-![Spox Oxide MCP Search](docs/assets/cc-search-spec-mcp.png)
+![Spox Oxide MCP Search](assets/cc-search-spec-mcp.png)
 
 The built-in MCP server is designed to optimize the context window and minimize token waste.
 
@@ -40,7 +40,7 @@ Spec Oxide maintains an up-to-date `CLAUDE.md` file that includes:
 
 Spec Oxide ships with a simple CLI that helps you manage specs and track changes:
 
-![Spox Oxide CLI](docs/assets/cli-show-screenshot.png)
+![Spox Oxide CLI](assets/cli-show-screenshot.png)
 
 ## Get started in minutes—no extra API keys required
 
