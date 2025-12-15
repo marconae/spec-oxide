@@ -8,7 +8,7 @@ This guide walks you through installation, first-time configuration, and updatin
 
 ```bash
 # 1. Install spox
-cargo install --git https://github.com/marconae/spec-oxide
+cargo install spec-oxide
 
 # 2. Initialize your project
 cd /path/to/your/project

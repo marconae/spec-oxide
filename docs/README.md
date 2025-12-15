@@ -49,7 +49,7 @@ Besides Claude Code, there are no additional API keys required.
 
 ```bash
 # Setup
-cargo install --git https://github.com/marconae/spec-oxide
+cargo install spec-oxide
 
 # Initialize a new project
 spox init
