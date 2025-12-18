@@ -2,13 +2,8 @@
 
 use std::path::Path;
 
-use crate::config::Config;
-use crate::core::index::{build_index, save_index};
-use crate::core::spec::parse_all_specs;
+use crate::core::index::rebuild_index;
 use crate::error::{Error, Result};
-
-/// Default index file path relative to project root.
-const INDEX_PATH: &str = ".spox/search_index.bin";
 
 /// Run the index command to build the semantic search index.
 ///
@@ -19,32 +14,17 @@ const INDEX_PATH: &str = ".spox/search_index.bin";
 /// - Specs cannot be parsed
 /// - Index cannot be built or saved
 pub fn run() -> Result<()> {
-    // Load configuration
-    let config = Config::load(Path::new(".spox/config.toml"))?;
+    eprintln!("Building search index...");
 
-    // Get spec folder from config
-    let spec_folder = Path::new(config.spec_folder());
+    // Use the core rebuild_index function which handles all the logic
+    let project_root = Path::new(".");
+    let specs_indexed = rebuild_index(project_root).map_err(|e| Error::Other(format!("{}", e)))?;
 
-    // Parse all specs
-    eprintln!("Parsing specs from {}...", spec_folder.display());
-    let specs = parse_all_specs(spec_folder).map_err(|e| Error::Other(e.to_string()))?;
-
-    if specs.is_empty() {
+    if specs_indexed == 0 {
         eprintln!("Warning: No spec files found");
-    } else {
-        eprintln!("Found {} specs", specs.len());
     }
 
-    // Build the index
-    eprintln!("Generating embeddings...");
-    let index = build_index(&specs).map_err(|e| Error::Other(e.to_string()))?;
-
-    // Save the index
-    let index_path = Path::new(INDEX_PATH);
-    eprintln!("Saving index to {}...", index_path.display());
-    save_index(&index, index_path).map_err(|e| Error::Other(e.to_string()))?;
-
-    eprintln!("Index built successfully with {} specs", index.specs.len());
+    eprintln!("Index built successfully with {} specs", specs_indexed);
     Ok(())
 }
 
@@ -54,6 +34,9 @@ mod tests {
     use serial_test::serial;
     use std::fs;
     use tempfile::TempDir;
+
+    /// Index file path (matches core::index::INDEX_PATH)
+    const INDEX_PATH: &str = ".spox/search_index.bin";
 
     fn create_test_environment() -> TempDir {
         let temp_dir = TempDir::new().unwrap();
@@ -106,11 +89,6 @@ The system SHALL provide basic {} features.
             name, name, name
         );
         fs::write(spec_dir.join("spec.md"), spec_content).unwrap();
-    }
-
-    #[test]
-    fn test_index_path_constant() {
-        assert_eq!(INDEX_PATH, ".spox/search_index.bin");
     }
 
     // Integration tests that require the embedding model are ignored by default

@@ -112,3 +112,25 @@ The Core SHALL provide functions to build and query a semantic search index.
 - **WHEN** `search(index, query, top_k)` is called
 - **THEN** it returns ranked search results
 - **AND** each result includes spec_id, requirement, score, and snippet
+
+#### Scenario: Ensure index exists
+
+- **WHEN** `ensure_index(project_root)` is called
+- **AND** no index exists at `.spox/search_index.bin`
+- **THEN** it parses all specs in the configured spec folder
+- **AND** it builds and saves the index
+- **AND** it returns the loaded index
+
+#### Scenario: Ensure index with existing index
+
+- **WHEN** `ensure_index(project_root)` is called
+- **AND** an index already exists at `.spox/search_index.bin`
+- **THEN** it loads and returns the existing index without rebuilding
+
+#### Scenario: Rebuild index
+
+- **WHEN** `rebuild_index(project_root)` is called
+- **THEN** it parses all specs in the configured spec folder
+- **AND** it builds a new index replacing any existing one
+- **AND** it saves the index to `.spox/search_index.bin`
+- **AND** it returns the number of specs indexed

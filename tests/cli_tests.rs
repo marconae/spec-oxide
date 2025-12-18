@@ -87,7 +87,7 @@ fn test_version_flag_contains_version_number() {
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("0.3.1"));
+        .stdout(predicate::str::contains("0.4.0"));
 }
 
 #[test]

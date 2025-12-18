@@ -12,6 +12,7 @@
 //! - `get_change`: Get full content of a change proposal (proposal, tasks, design, deltas)
 //! - `validate_spec`: Validate spec structure and content (all specs or specific one)
 //! - `validate_change`: Validate change proposal structure and content (all changes or specific one)
+//! - `rebuild_index`: Rebuild the search index from all specs
 //!
 //! ## Usage
 //!
@@ -143,6 +144,9 @@ pub struct SearchResultItem {
 pub struct SearchSpecsResponse {
     /// Search results ordered by relevance.
     pub results: Vec<SearchResultItem>,
+    /// Whether the search index was auto-built (true if index was missing and auto-built).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index_built: Option<bool>,
 }
 
 // =============================================================================
@@ -309,6 +313,13 @@ pub struct ValidationResponse {
     pub summary: String,
 }
 
+/// Response for rebuild_index tool.
+#[derive(Debug, Clone, Serialize, JsonSchema)]
+pub struct RebuildIndexResponse {
+    /// The number of specs indexed.
+    pub specs_indexed: usize,
+}
+
 // =============================================================================
 // MCP Server
 // =============================================================================
@@ -325,6 +336,10 @@ pub struct SpoxServer {
     /// Changes folder path (relative to project root).
     changes_folder: String,
     /// The search index (if available).
+    /// Note: This field is retained for backwards compatibility with the original
+    /// search_specs implementation. The current implementation uses ensure_index
+    /// which auto-builds the index when missing.
+    #[allow(dead_code)]
     index: Option<Arc<SpecIndex>>,
 }
 
@@ -449,7 +464,10 @@ impl SpoxServer {
         })
     }
 
-    /// Core implementation for search_specs.
+    /// Core implementation for search_specs (original, requires pre-loaded index).
+    /// Note: This method is retained for backwards compatibility. The search_specs tool
+    /// now uses do_search_specs_with_auto_build which auto-builds the index when missing.
+    #[allow(dead_code)]
     pub fn do_search_specs(
         &self,
         query: &str,
@@ -472,7 +490,45 @@ impl SpoxServer {
             })
             .collect();
 
-        Ok(SearchSpecsResponse { results: items })
+        Ok(SearchSpecsResponse {
+            results: items,
+            index_built: None,
+        })
+    }
+
+    /// Core implementation for search_specs with auto-build support.
+    ///
+    /// This method will auto-build the index if it doesn't exist, and indicate
+    /// in the response whether the index was auto-built.
+    pub fn do_search_specs_with_auto_build(
+        &self,
+        query: &str,
+        top_k: usize,
+    ) -> Result<SearchSpecsResponse, String> {
+        let index_path = self.project_root.join(".spox/search_index.bin");
+        let was_missing = !index_path.exists();
+
+        // Use ensure_index to get or build the index
+        let idx = index::ensure_index(&self.project_root, &self.specs_path())
+            .map_err(|e| format!("Failed to ensure index: {}", e))?;
+
+        let results =
+            index::search(&idx, query, top_k).map_err(|e| format!("Search failed: {}", e))?;
+
+        let items = results
+            .into_iter()
+            .map(|r| SearchResultItem {
+                spec_id: r.spec_id,
+                requirement: r.requirement,
+                score: r.score,
+                snippet: r.snippet,
+            })
+            .collect();
+
+        Ok(SearchSpecsResponse {
+            results: items,
+            index_built: Some(was_missing),
+        })
     }
 
     /// Core implementation for list_changes.
@@ -949,6 +1005,16 @@ impl SpoxServer {
             None
         }
     }
+
+    /// Core implementation for rebuild_index.
+    ///
+    /// Rebuilds the search index from all specs.
+    pub fn do_rebuild_index(&self) -> Result<RebuildIndexResponse, String> {
+        let specs_indexed = index::rebuild_index(&self.project_root)
+            .map_err(|e| format!("Failed to rebuild index: {}", e))?;
+
+        Ok(RebuildIndexResponse { specs_indexed })
+    }
 }
 
 // =============================================================================
@@ -998,11 +1064,11 @@ impl SpoxServer {
 
     /// Search specs semantically.
     #[tool(
-        description = "Search specs semantically using the pre-built search index. Returns ranked results. Requires 'spox index' to be run first."
+        description = "Search specs semantically. Automatically builds search index if missing. Returns ranked results with index_built flag if index was auto-built."
     )]
     async fn search_specs(&self, #[tool(aggr)] req: SearchSpecsRequest) -> String {
         let top_k = req.top_k.unwrap_or(10);
-        match self.do_search_specs(&req.query, top_k) {
+        match self.do_search_specs_with_auto_build(&req.query, top_k) {
             Ok(response) => serde_json::to_string_pretty(&response).unwrap_or_else(|e| {
                 format!("{{\"error\": \"Failed to serialize response: {}\"}}", e)
             }),
@@ -1059,6 +1125,19 @@ impl SpoxServer {
             Err(e) => format!("{{\"error\": \"{}\"}}", e),
         }
     }
+
+    /// Rebuild the search index.
+    #[tool(
+        description = "Rebuild the search index from all specs. Returns the count of specs indexed."
+    )]
+    async fn rebuild_index(&self) -> String {
+        match self.do_rebuild_index() {
+            Ok(response) => serde_json::to_string_pretty(&response).unwrap_or_else(|e| {
+                format!("{{\"error\": \"Failed to serialize response: {}\"}}", e)
+            }),
+            Err(e) => format!("{{\"error\": \"{}\"}}", e),
+        }
+    }
 }
 
 // =============================================================================
@@ -1081,7 +1160,8 @@ impl ServerHandler for SpoxServer {
                  details, and search_specs to find relevant content across all specs. Use list_changes \
                  to see active change proposals, and get_change to retrieve change details. Use \
                  validate_spec to validate spec structure and content (all specs or a specific one), \
-                 and validate_change to validate change proposals (all changes or a specific one)."
+                 validate_change to validate change proposals (all changes or a specific one), and \
+                 rebuild_index to rebuild the search index from all specs."
                     .into(),
             ),
         }
@@ -1392,7 +1472,9 @@ The system SHALL do something basic.
     // ==================== search_specs tests ====================
 
     #[test]
-    fn test_search_specs_no_index() {
+    fn test_search_specs_no_index_returns_error_without_auto_build() {
+        // NOTE: This test verifies the OLD behavior where search fails without index.
+        // The new do_search_specs_with_auto_build method supports auto-building.
         let temp_dir = TempDir::new().unwrap();
         let specs_dir = temp_dir.path().join("specs");
         fs::create_dir_all(&specs_dir).unwrap();
@@ -1401,11 +1483,107 @@ The system SHALL do something basic.
         let config = create_test_config("specs");
         let server = SpoxServer::new(&config, temp_dir.path().to_path_buf());
 
-        // Without index, search should fail
+        // Without index, the original search method should fail
         let result = server.do_search_specs("login", 10);
 
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("index"));
+    }
+
+    #[test]
+    #[ignore] // Requires fastembed model download
+    fn test_search_specs_auto_builds_missing_index() {
+        // This test verifies the NEW behavior: auto-build index when missing
+        let temp_dir = TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox config directory
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // Create specs directory with a test spec
+        let specs_dir = project_root.join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+        create_test_spec(&specs_dir, "auth", VALID_SPEC);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, project_root.to_path_buf());
+
+        // No index file exists
+        let index_path = spox_dir.join("search_index.bin");
+        assert!(!index_path.exists(), "Index should not exist before search");
+
+        // Search should auto-build the index and succeed
+        let result = server.do_search_specs_with_auto_build("login", 10);
+
+        assert!(
+            result.is_ok(),
+            "Search should succeed with auto-build: {:?}",
+            result
+        );
+
+        let response = result.unwrap();
+
+        // Response should indicate that index was built
+        assert_eq!(
+            response.index_built,
+            Some(true),
+            "Response should indicate index was auto-built"
+        );
+
+        // Index file should now exist
+        assert!(
+            index_path.exists(),
+            "Index file should be created after auto-build"
+        );
+
+        // Results should contain relevant content
+        assert!(!response.results.is_empty(), "Should have search results");
+    }
+
+    #[test]
+    #[ignore] // Requires fastembed model download
+    fn test_search_specs_uses_existing_index() {
+        // This test verifies that existing index is used (no auto-build)
+        let temp_dir = TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox config directory
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // Create specs directory with a test spec
+        let specs_dir = project_root.join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+        create_test_spec(&specs_dir, "auth", VALID_SPEC);
+
+        // Build the index first
+        let index_path = spox_dir.join("search_index.bin");
+        let specs = crate::core::spec::parse_all_specs(&specs_dir).unwrap();
+        let index = crate::core::index::build_index(&specs).unwrap();
+        crate::core::index::save_index(&index, &index_path).unwrap();
+
+        assert!(index_path.exists(), "Index should exist before search");
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, project_root.to_path_buf());
+
+        // Search should use existing index
+        let result = server.do_search_specs_with_auto_build("login", 10);
+
+        assert!(result.is_ok(), "Search should succeed: {:?}", result);
+
+        let response = result.unwrap();
+
+        // Response should indicate that index was NOT built (used existing)
+        assert_eq!(
+            response.index_built,
+            Some(false),
+            "Response should indicate index was not auto-built"
+        );
+
+        // Results should contain relevant content
+        assert!(!response.results.is_empty(), "Should have search results");
     }
 
     // ==================== ServerHandler tests ====================
@@ -1834,5 +2012,82 @@ The system SHALL do something new.
         let has_file_info = response.errors.iter().any(|e| e.file.contains("spec.md"))
             || response.warnings.iter().any(|w| w.file.contains("spec.md"));
         assert!(has_file_info || response.valid);
+    }
+
+    // =========================================================================
+    // rebuild_index Tests
+    // =========================================================================
+
+    #[test]
+    fn test_rebuild_index_returns_count() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox directory with config
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(
+            spox_dir.join("config.toml"),
+            r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp"]
+"#,
+        )
+        .unwrap();
+
+        // Create specs directory with test specs
+        let specs_dir = project_root.join("specs");
+        create_test_spec(&specs_dir, "auth", VALID_SPEC);
+        create_test_spec(&specs_dir, "simple", SIMPLE_SPEC);
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, project_root.to_path_buf());
+
+        let result = server.do_rebuild_index();
+
+        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+        let response = result.unwrap();
+        assert_eq!(response.specs_indexed, 2);
+    }
+
+    #[test]
+    fn test_rebuild_index_with_no_specs() {
+        let temp_dir = TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox directory with config
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(
+            spox_dir.join("config.toml"),
+            r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp"]
+"#,
+        )
+        .unwrap();
+
+        // Create empty specs directory
+        let specs_dir = project_root.join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+
+        let config = create_test_config("specs");
+        let server = SpoxServer::new(&config, project_root.to_path_buf());
+
+        let result = server.do_rebuild_index();
+
+        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+        let response = result.unwrap();
+        assert_eq!(response.specs_indexed, 0);
     }
 }

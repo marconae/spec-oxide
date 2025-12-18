@@ -155,6 +155,90 @@ pub fn save_index(index: &SpecIndex, path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Default index file path relative to project root.
+const INDEX_PATH: &str = ".spox/search_index.bin";
+
+/// Config file path relative to project root.
+const CONFIG_PATH: &str = ".spox/config.toml";
+
+/// Rebuild the search index from scratch.
+///
+/// This function parses all specs from the configured spec folder, builds a new
+/// index (replacing any existing one), and saves it to `.spox/search_index.bin`.
+///
+/// # Arguments
+///
+/// * `project_root` - The root directory of the project
+///
+/// # Returns
+///
+/// The number of specs indexed.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Configuration cannot be loaded
+/// - Specs cannot be parsed
+/// - Index cannot be built or saved
+pub fn rebuild_index(project_root: &Path) -> Result<usize> {
+    // Load configuration
+    let config_path = project_root.join(CONFIG_PATH);
+    let config = crate::config::Config::load(&config_path)
+        .map_err(|e| Error::Other(format!("Failed to load config: {}", e)))?;
+
+    // Get spec folder from config (relative to project root)
+    let spec_folder = project_root.join(config.spec_folder());
+
+    // Parse all specs
+    let specs = super::spec::parse_all_specs(&spec_folder)?;
+
+    // Build the index
+    let index = build_index(&specs)?;
+    let spec_count = index.specs.len();
+
+    // Save the index
+    let index_path = project_root.join(INDEX_PATH);
+    save_index(&index, &index_path)?;
+
+    Ok(spec_count)
+}
+
+/// Ensure the search index exists, building it if necessary.
+///
+/// This function checks if an index file exists at `.spox/search_index.bin` relative
+/// to the project root. If the index exists, it is loaded and returned. If not,
+/// all specs are parsed and a new index is built, saved, and returned.
+///
+/// # Arguments
+///
+/// * `project_root` - The root directory of the project
+/// * `specs_folder` - The folder containing spec files
+///
+/// # Returns
+///
+/// The `SpecIndex` (either loaded or newly built).
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The existing index cannot be loaded
+/// - Specs cannot be parsed (when building)
+/// - The new index cannot be built or saved
+pub fn ensure_index(project_root: &Path, specs_folder: &Path) -> Result<SpecIndex> {
+    let index_path = project_root.join(INDEX_PATH);
+
+    if index_path.exists() {
+        // Index exists, load and return it
+        load_index(&index_path)
+    } else {
+        // Index doesn't exist, build it
+        let specs = super::spec::parse_all_specs(specs_folder)?;
+        let index = build_index(&specs)?;
+        save_index(&index, &index_path)?;
+        Ok(index)
+    }
+}
+
 /// Load the search index from a file.
 ///
 /// # Arguments
@@ -512,6 +596,106 @@ mod tests {
         assert!(results.len() <= 5);
     }
 
+    // ==================== Ensure index tests ====================
+
+    #[test]
+    #[ignore] // Requires embedding model download
+    fn test_ensure_index_builds_when_missing() {
+        use std::fs;
+
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox directory
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // Create specs directory with a test spec
+        let specs_dir = project_root.join("specs");
+        let spec_dir = specs_dir.join("test-spec");
+        fs::create_dir_all(&spec_dir).unwrap();
+        fs::write(
+            spec_dir.join("spec.md"),
+            r#"# Test Specification
+
+## Purpose
+
+A test spec for ensure_index.
+
+## Requirements
+
+### Requirement: Basic Feature
+
+The system SHALL do something.
+
+#### Scenario: Basic behavior
+
+- **WHEN** user does something
+- **THEN** something happens
+"#,
+        )
+        .unwrap();
+
+        // No index file exists yet
+        let index_path = spox_dir.join("search_index.bin");
+        assert!(!index_path.exists(), "Index should not exist yet");
+
+        // Call ensure_index
+        let result = ensure_index(project_root, &specs_dir);
+
+        // Should succeed
+        assert!(result.is_ok(), "ensure_index should succeed: {:?}", result);
+
+        // Index file should now exist
+        assert!(index_path.exists(), "Index file should be created");
+
+        // Returned index should have the spec
+        let index = result.unwrap();
+        assert_eq!(index.specs.len(), 1);
+        assert_eq!(index.specs[0].id, "test-spec");
+    }
+
+    #[test]
+    fn test_ensure_index_loads_existing() {
+        use std::fs;
+
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox directory
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // Create specs directory (empty)
+        let specs_dir = project_root.join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+
+        // Create an existing index file with known data
+        let existing_index = SpecIndex {
+            model_name: "existing-model".to_string(),
+            specs: vec![IndexedSpec {
+                id: "existing-spec".to_string(),
+                title: "Existing Spec".to_string(),
+                purpose_embedding: vec![0.1, 0.2, 0.3],
+                requirements: vec![],
+            }],
+        };
+        let index_path = spox_dir.join("search_index.bin");
+        save_index(&existing_index, &index_path).unwrap();
+
+        // Call ensure_index
+        let result = ensure_index(project_root, &specs_dir);
+
+        // Should succeed and return existing index
+        assert!(result.is_ok(), "ensure_index should succeed: {:?}", result);
+
+        let index = result.unwrap();
+        // Should have loaded the existing index, not rebuilt
+        assert_eq!(index.model_name, "existing-model");
+        assert_eq!(index.specs.len(), 1);
+        assert_eq!(index.specs[0].id, "existing-spec");
+    }
+
     #[test]
     #[ignore]
     fn test_build_and_save_load_roundtrip() {
@@ -548,5 +732,144 @@ mod tests {
             loaded_index.specs[0].purpose_embedding.len(),
             index.specs[0].purpose_embedding.len()
         );
+    }
+
+    // ==================== rebuild_index tests ====================
+
+    #[test]
+    #[ignore] // Requires embedding model download
+    fn test_rebuild_index_with_specs() {
+        use std::fs;
+
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox directory and config
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(
+            spox_dir.join("config.toml"),
+            r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp"]
+"#,
+        )
+        .unwrap();
+
+        // Create specs folder with two specs
+        let specs_dir = project_root.join("specs");
+        fs::create_dir_all(specs_dir.join("auth")).unwrap();
+        fs::write(
+            specs_dir.join("auth/spec.md"),
+            r#"# Auth Specification
+
+## Purpose
+
+Handle user authentication.
+
+## Requirements
+
+### Requirement: Login
+
+Users can log in.
+
+#### Scenario: Successful login
+
+- **WHEN** valid credentials provided
+- **THEN** user is authenticated
+"#,
+        )
+        .unwrap();
+
+        fs::create_dir_all(specs_dir.join("payments")).unwrap();
+        fs::write(
+            specs_dir.join("payments/spec.md"),
+            r#"# Payments Specification
+
+## Purpose
+
+Handle payment processing.
+
+## Requirements
+
+### Requirement: Checkout
+
+Process payments.
+
+#### Scenario: Successful payment
+
+- **WHEN** valid payment info provided
+- **THEN** payment is processed
+"#,
+        )
+        .unwrap();
+
+        // Rebuild index
+        let result = rebuild_index(project_root);
+        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+
+        let count = result.unwrap();
+        assert_eq!(count, 2, "Expected 2 specs indexed, got {}", count);
+
+        // Verify index file was created
+        let index_path = spox_dir.join("search_index.bin");
+        assert!(index_path.exists(), "Index file should exist");
+
+        // Verify index content
+        let index = load_index(&index_path).expect("Should load index");
+        assert_eq!(index.specs.len(), 2);
+    }
+
+    #[test]
+    #[ignore] // Requires embedding model download
+    fn test_rebuild_index_with_no_specs() {
+        use std::fs;
+
+        let temp_dir = tempfile::TempDir::new().unwrap();
+        let project_root = temp_dir.path();
+
+        // Create .spox directory and config
+        let spox_dir = project_root.join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+        fs::write(
+            spox_dir.join("config.toml"),
+            r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp"]
+"#,
+        )
+        .unwrap();
+
+        // Create empty specs folder
+        let specs_dir = project_root.join("specs");
+        fs::create_dir_all(&specs_dir).unwrap();
+
+        // Rebuild index
+        let result = rebuild_index(project_root);
+        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+
+        let count = result.unwrap();
+        assert_eq!(count, 0, "Expected 0 specs indexed, got {}", count);
+
+        // Verify index file was created (even if empty)
+        let index_path = spox_dir.join("search_index.bin");
+        assert!(
+            index_path.exists(),
+            "Index file should exist even when empty"
+        );
+
+        // Verify index content
+        let index = load_index(&index_path).expect("Should load index");
+        assert_eq!(index.specs.len(), 0);
     }
 }

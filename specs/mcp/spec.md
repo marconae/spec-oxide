@@ -106,17 +106,38 @@ The MCP server SHALL provide a `search_specs` tool that performs semantic search
 - **AND** each result includes `spec_id`, `requirement`, `score`, and `snippet`
 - **AND** results are ordered by descending relevance score
 
-#### Scenario: Search with no index
+#### Scenario: Search auto-builds missing index
 
 - **WHEN** the `search_specs` tool is called
-- **AND** no search index exists
-- **THEN** the tool returns an error indicating the index must be built first
+- **AND** no search index exists at `.spox/search_index.bin`
+- **THEN** the tool calls Core `ensure_index` to build the index
+- **AND** the search proceeds normally after index is built
+- **AND** the response includes a note that the index was auto-built
 
 #### Scenario: Search with empty results
 
 - **WHEN** the `search_specs` tool is called with a query
 - **AND** no specs match the query above the relevance threshold
 - **THEN** the response contains an empty results array
+
+### Requirement: Rebuild Index Tool
+
+The MCP server SHALL provide a `rebuild_index` tool that forces a rebuild of the semantic search index.
+
+#### Scenario: Rebuild index
+
+- **WHEN** the `rebuild_index` tool is called
+- **THEN** it calls Core `rebuild_index` function
+- **AND** all specs are re-parsed and re-indexed
+- **AND** the index is saved to `.spox/search_index.bin`
+- **AND** the response confirms the rebuild with the number of specs indexed
+
+#### Scenario: Rebuild with no specs
+
+- **WHEN** the `rebuild_index` tool is called
+- **AND** no spec files exist
+- **THEN** an empty index is created
+- **AND** the response indicates zero specs were indexed
 
 ### Requirement: List Changes Tool
 
@@ -236,4 +257,4 @@ The MCP server SHALL operate without the search index, with reduced functionalit
 - **WHEN** the MCP server starts
 - **AND** no search index exists
 - **THEN** the `list_specs`, `get_spec_requirements`, and `get_scenario` tools work normally
-- **AND** the `search_specs` tool returns an error indicating the index is unavailable
+- **AND** the `search_specs` tool auto-builds the index on first use

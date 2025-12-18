@@ -406,3 +406,67 @@ fn test_show_dashboard_works() {
 
     spox_cmd().current_dir(root).arg("show").assert().success();
 }
+
+// =============================================================================
+// Test: rebuild_index MCP tool (via index command)
+// =============================================================================
+
+#[test]
+#[ignore] // Requires fastembed model download
+fn test_rebuild_index_creates_index_with_specs() {
+    let temp_dir = TempDir::new().unwrap();
+    let root = temp_dir.path();
+
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
+    fs::create_dir_all(&specs_dir).unwrap();
+    fs::create_dir_all(&changes_dir).unwrap();
+
+    create_config(root, "specs", "specs/_changes");
+    create_spec(&specs_dir, "auth", AUTH_SPEC);
+    create_spec(&specs_dir, "payments", PAYMENTS_SPEC);
+
+    // Build index (this exercises the same core::rebuild_index function as the MCP tool)
+    spox_cmd()
+        .current_dir(root)
+        .arg("index")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("Index built successfully"));
+
+    // Verify index file was created
+    let index_path = root.join(".spox/search_index.bin");
+    assert!(
+        index_path.exists(),
+        "Index file should exist after rebuild_index"
+    );
+}
+
+#[test]
+#[ignore] // Requires fastembed model download
+fn test_rebuild_index_with_no_specs() {
+    let temp_dir = TempDir::new().unwrap();
+    let root = temp_dir.path();
+
+    let specs_dir = root.join("specs");
+    let changes_dir = root.join("specs/_changes");
+    fs::create_dir_all(&specs_dir).unwrap();
+    fs::create_dir_all(&changes_dir).unwrap();
+
+    create_config(root, "specs", "specs/_changes");
+
+    // Build index with no specs (should succeed with 0 specs indexed)
+    spox_cmd()
+        .current_dir(root)
+        .arg("index")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("Index built"));
+
+    // Verify index file was created (even though empty)
+    let index_path = root.join(".spox/search_index.bin");
+    assert!(
+        index_path.exists(),
+        "Index file should exist even when no specs"
+    );
+}
