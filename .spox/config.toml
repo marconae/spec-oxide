@@ -6,5 +6,5 @@ changes_folder = "specs/_changes"
 archive_folder = "specs/_archive"
 
 [rules]
-system = ["mcp", "global", "coding", "testing", "backend", "frontend", "vcs"]
+system = ["mcp", "global", "coding", "testing", "backend", "vcs"]
 custom = []
