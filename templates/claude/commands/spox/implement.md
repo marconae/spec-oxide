@@ -58,9 +58,11 @@ Confirm scope matches what was approved before proceeding.
 
 Work through the fetched tasks list systematically:
 
-- **Parallelize** independent tasks by spawning `spox-implementer` subagents
+- **Implement** tasks by spawning `spox-implementer` subagents
+- **Serially** execute tasks in order and do not spawn agents in parallel
 - **Sequence** dependent tasks as outlined in fetched tasks list
 - **Stay focused** on one task at a time per subagent
+- **Optimize** context windows—if subagents run out of context, complete the task and resume the work with a fresh context
 
 ### 4. Track Progress
 
