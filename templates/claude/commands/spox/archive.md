@@ -83,6 +83,16 @@ Confirm specs are consistent:
 
 Fix any validation issues before completing.
 
+### 6. Update Search Index
+
+Rebuild the search index so archived changes are reflected in search results:
+
+**Use Spox MCP tools:**
+
+- `mcp__spox__rebuild_index` — Rebuild the search index from all specs
+
+This ensures the index is up-to-date for searching after the change is archived.
+
 ## Output
 
 When complete:
