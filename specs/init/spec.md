@@ -39,6 +39,7 @@ The `spox init` command SHALL bootstrap a new Spec Oxide project or update an ex
 - **AND** appends missing rules to `.claude/.gitignore` without duplicating existing rules
 - **AND** preserves existing `specs/mission.md`
 - **AND** preserves existing `.spox/custom/` directory and contents
+- **AND** preserves existing `.spox/config.toml` user customizations including `[rules].system` and `[rules].custom` arrays
 - **AND** does not modify any files in `specs/`, `specs/_changes/`, or `specs/_archive/`
 - **AND** exits with code 0
 - **AND** prints update success message with environment setup hints
@@ -61,7 +62,7 @@ The `spox init` command SHALL create and preserve the `.spox/custom/` directory 
 
 ### Requirement: Configuration Migration
 
-The `spox init` command SHALL migrate existing configurations to the new format with `[rules]` section.
+The `spox init` command SHALL migrate existing configurations to the new format with `[rules]` section while preserving user customizations.
 
 #### Scenario: Missing rules section added on update
 
@@ -69,6 +70,13 @@ The `spox init` command SHALL migrate existing configurations to the new format 
 - **THEN** the `[rules]` section is added to config.toml
 - **AND** `system` array contains all available templates by default
 - **AND** existing configuration values are preserved
+
+#### Scenario: Existing rules section preserved on update
+
+- **WHEN** `spox init` runs on existing project with `[rules]` section in config.toml
+- **THEN** the existing `[rules].system` array is preserved
+- **AND** the existing `[rules].custom` array is preserved
+- **AND** user customizations to the rules arrays are NOT overwritten
 
 ### Requirement: Template File Copying
 
@@ -270,6 +278,48 @@ The generated CLAUDE.md SHALL reference the project mission via `@specs/mission.
 - **WHEN** `spox init` generates `.claude/CLAUDE.md`
 - **THEN** the file contains `@specs/mission.md` reference
 - **AND** the file does NOT contain embedded mission content
+
+### Requirement: Version Lock File
+
+The `spox init` command SHALL create and maintain a `.spox/version.lock` file that tracks the spox version used to initialize and update the project.
+
+#### Scenario: Lock file created on fresh init
+
+- **WHEN** `spox init` runs on a fresh project without `.spox/version.lock`
+- **THEN** `.spox/version.lock` is created with `initialized_version` set to the current binary version
+- **AND** `updated_versions` array is empty
+
+#### Scenario: Lock file updated on subsequent init
+
+- **WHEN** `spox init` runs on a project with existing `.spox/version.lock`
+- **AND** the current binary version differs from the last recorded version
+- **THEN** the current version is appended to `updated_versions` array
+- **AND** `initialized_version` is preserved
+
+#### Scenario: Lock file unchanged on same version
+
+- **WHEN** `spox init` runs on a project with existing `.spox/version.lock`
+- **AND** the current binary version matches the last recorded version
+- **THEN** `.spox/version.lock` is not modified
+
+### Requirement: Version Compatibility Warning
+
+The `spox init` command SHALL warn users when running a binary older than the project's recorded version.
+
+#### Scenario: Older binary warning displayed
+
+- **WHEN** `spox init` runs on a project with `.spox/version.lock`
+- **AND** the current binary version is lower than the lock file's latest version
+- **THEN** a warning is displayed indicating the binary may be outdated
+- **AND** the command continues execution (non-blocking)
+
+#### Scenario: Migration hints on upgrade
+
+- **WHEN** `spox init` runs on a project with `.spox/version.lock`
+- **AND** the current binary version is higher than the lock file's latest version
+- **AND** the version difference spans a minor or major version boundary
+- **THEN** a message indicates the project is being upgraded
+- **AND** relevant migration hints are displayed if available
 
 ### Requirement: CLAUDE.md Format Validation
 

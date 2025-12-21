@@ -5,6 +5,7 @@
 
 pub mod change;
 pub mod dashboard;
+pub mod project;
 pub mod spec;
 
 // Re-export rendering utilities from cli/render for backward compatibility

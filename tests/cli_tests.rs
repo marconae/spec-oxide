@@ -87,7 +87,7 @@ fn test_version_flag_contains_version_number() {
         .arg("--version")
         .assert()
         .success()
-        .stdout(predicate::str::contains("0.4.0"));
+        .stdout(predicate::str::contains("0.5.0"));
 }
 
 #[test]
@@ -765,4 +765,157 @@ fn test_config_show_displays_header() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Configuration"));
+}
+
+// =============================================================================
+// Show Command Tests (Project Info with Version Tracking)
+// =============================================================================
+
+#[test]
+fn test_show_displays_project_info() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Initialize project
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify show displays project info
+    spox_cmd()
+        .current_dir(temp_dir.path())
+        .arg("show")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Project:"))
+        .stdout(predicate::str::contains("Root:"))
+        .stdout(predicate::str::contains("Initialized:"))
+        .stdout(predicate::str::contains("Binary:"))
+        .stdout(predicate::str::contains("Status:"))
+        .stdout(predicate::str::contains("Config:"))
+        .stdout(predicate::str::contains("Specs folder:"))
+        .stdout(predicate::str::contains("Rules:"));
+}
+
+#[test]
+fn test_show_displays_version_ok_status() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Initialize project (creates version.lock with current version)
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify status shows OK
+    spox_cmd()
+        .current_dir(temp_dir.path())
+        .arg("show")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("OK"));
+}
+
+#[test]
+fn test_show_fails_outside_project() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Run show without initialization - should fail
+    spox_cmd()
+        .current_dir(temp_dir.path())
+        .arg("show")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("config not found"));
+}
+
+#[test]
+fn test_show_handles_missing_lock_file() {
+    use std::fs;
+
+    let temp_dir = TempDir::new().unwrap();
+
+    // Initialize project
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Delete the version.lock file
+    let lock_path = temp_dir.path().join(".spox/version.lock");
+    if lock_path.exists() {
+        fs::remove_file(&lock_path).unwrap();
+    }
+
+    // Verify show handles missing lock file gracefully
+    spox_cmd()
+        .current_dir(temp_dir.path())
+        .arg("show")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("unknown"))
+        .stdout(predicate::str::contains("spox init"));
+}
+
+#[test]
+fn test_show_displays_version_warning_when_binary_older() {
+    use std::fs;
+
+    let temp_dir = TempDir::new().unwrap();
+
+    // Initialize project
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Manually create a version.lock with a future version
+    let lock_path = temp_dir.path().join(".spox/version.lock");
+    fs::write(
+        &lock_path,
+        r#"initialized_version = "99.99.99"
+updated_versions = []
+"#,
+    )
+    .unwrap();
+
+    // Verify status shows WARNING
+    spox_cmd()
+        .current_dir(temp_dir.path())
+        .arg("show")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("WARNING"))
+        .stdout(predicate::str::contains("upgrading"));
+}
+
+#[test]
+fn test_show_includes_dashboard() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Initialize project
+    spox_cmd()
+        .arg("init")
+        .arg("--path")
+        .arg(temp_dir.path())
+        .assert()
+        .success();
+
+    // Verify show includes the dashboard sections
+    spox_cmd()
+        .current_dir(temp_dir.path())
+        .arg("show")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Spec Oxide Dashboard"))
+        .stdout(predicate::str::contains("Specs:"))
+        .stdout(predicate::str::contains("Active Changes:"));
 }

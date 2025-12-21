@@ -15,3 +15,4 @@ pub mod error;
 pub mod index;
 pub mod spec;
 pub mod validate;
+pub mod version_lock;

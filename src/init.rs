@@ -1,6 +1,10 @@
 //! Init command implementation for bootstrapping a new Spox project.
 
 use crate::config::Config;
+use crate::core::version_lock::{
+    compare_versions, current_version, get_migration_hints, UpgradeType, VersionComparison,
+    VersionLock, VERSION_LOCK_FILENAME,
+};
 use crate::error::{Error, Result};
 use std::fs;
 use std::path::Path;
@@ -125,11 +129,14 @@ fn create_spox_dir(base_path: &Path) -> Result<()> {
     create_dir_all(&custom_dir)?;
     create_dir_all(&templates_change_dir)?;
 
-    // Write config file
-    write_file(&spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML)?;
+    // Write config file (preserve existing to keep user customizations)
+    write_file_if_not_exists(&spox_dir.join("config.toml"), TEMPLATE_CONFIG_TOML)?;
 
     // Write .gitignore for spox-managed files
     append_gitignore_rules(&spox_dir.join(".gitignore"), TEMPLATE_SPOX_GITIGNORE)?;
+
+    // Create or update version lock file
+    create_or_update_version_lock(&spox_dir)?;
 
     // Write spec template files
     write_file(&templates_dir.join("spec.md"), TEMPLATE_SPEC_SPEC_MD)?;
@@ -249,6 +256,116 @@ fn write_file_if_not_exists(path: &Path, content: &str) -> Result<()> {
     if !path.exists() {
         write_file(path, content)?;
     }
+    Ok(())
+}
+
+/// Format a warning message for when the binary is older than the lock file version.
+fn format_version_warning(binary_version: &str, lock_version: &str) -> String {
+    format!(
+        "Warning: Your spox binary ({}) is older than this project's version ({}).\n\
+         Consider upgrading spox to avoid compatibility issues.",
+        binary_version, lock_version
+    )
+}
+
+/// Format an upgrade message, optionally including migration hints.
+fn format_upgrade_message(
+    from_version: &str,
+    to_version: &str,
+    upgrade_type: UpgradeType,
+) -> String {
+    let upgrade_type_str = match upgrade_type {
+        UpgradeType::Patch => "patch",
+        UpgradeType::Minor => "minor",
+        UpgradeType::Major => "major",
+    };
+
+    let mut message = format!(
+        "Upgrading project from {} to {} ({} version update).",
+        from_version, to_version, upgrade_type_str
+    );
+
+    // Add migration hints for minor/major upgrades
+    if let Some(hint) = get_migration_hints(from_version, to_version) {
+        message.push_str("\n\nMigration note: ");
+        message.push_str(hint);
+    }
+
+    message
+}
+
+/// Create or update the version lock file.
+///
+/// On fresh init, creates a new version.lock with the current binary version.
+/// On subsequent init, appends the current version to updated_versions if it differs
+/// from the last recorded version.
+///
+/// Displays warnings/hints based on version comparison:
+/// - Warning if binary is older than lock file version
+/// - Upgrade message with migration hints if binary is newer
+fn create_or_update_version_lock(spox_dir: &Path) -> Result<()> {
+    let lock_path = spox_dir.join(VERSION_LOCK_FILENAME);
+    let version = current_version();
+
+    if lock_path.exists() {
+        // Load existing lock and update if version changed
+        let mut lock = VersionLock::load(&lock_path).map_err(|e| {
+            Error::Init(format!(
+                "failed to read version lock '{}': {}",
+                lock_path.display(),
+                e
+            ))
+        })?;
+
+        let last_version = lock.last_version().to_string();
+
+        // Compare versions and display appropriate messages
+        if let Ok(comparison) = compare_versions(version, &last_version) {
+            match comparison {
+                VersionComparison::BinaryOlder => {
+                    // Display warning for older binary (non-blocking)
+                    eprintln!();
+                    eprintln!("{}", format_version_warning(version, &last_version));
+                    eprintln!();
+                }
+                VersionComparison::BinaryNewer { upgrade_type } => {
+                    // Display upgrade message with optional migration hints
+                    if matches!(upgrade_type, UpgradeType::Minor | UpgradeType::Major) {
+                        println!();
+                        println!(
+                            "{}",
+                            format_upgrade_message(&last_version, version, upgrade_type)
+                        );
+                        println!();
+                    }
+                }
+                VersionComparison::Equal => {
+                    // Versions match, nothing to display
+                }
+            }
+        }
+
+        if lock.record_update(version) {
+            lock.save(&lock_path).map_err(|e| {
+                Error::Init(format!(
+                    "failed to write version lock '{}': {}",
+                    lock_path.display(),
+                    e
+                ))
+            })?;
+        }
+    } else {
+        // Create new lock file
+        let lock = VersionLock::new(version);
+        lock.save(&lock_path).map_err(|e| {
+            Error::Init(format!(
+                "failed to write version lock '{}': {}",
+                lock_path.display(),
+                e
+            ))
+        })?;
+    }
+
     Ok(())
 }
 
@@ -453,18 +570,56 @@ fn get_user_templates_content(base_path: &Path, custom_templates: &[String]) -> 
 }
 
 /// Load config, migrating old format if needed.
+///
+/// When a config file is missing required sections (like `[rules]` or `[paths]`),
+/// this function merges the default values for those sections while preserving
+/// any existing user customizations.
 fn load_or_migrate_config(base_path: &Path) -> Result<Config> {
     let config_path = base_path.join(".spox").join("config.toml");
 
     match Config::load(&config_path) {
         Ok(config) => Ok(config),
         Err(Error::ConfigMissingField(field)) if field == "rules" || field == "paths" => {
-            // Old config format - write new config and load again
-            write_file(&config_path, TEMPLATE_CONFIG_TOML)?;
+            // Old config format - merge with defaults and load again
+            merge_config_with_defaults(&config_path)?;
             Config::load(&config_path)
         }
         Err(e) => Err(e),
     }
+}
+
+/// Merge existing config with default values for any missing sections.
+///
+/// Reads the existing config, adds any missing sections from the default template,
+/// and writes the merged result back to the file. Preserves all existing values.
+fn merge_config_with_defaults(config_path: &Path) -> Result<()> {
+    // Read existing config
+    let existing_content = fs::read_to_string(config_path)
+        .map_err(|e| Error::Init(format!("failed to read config: {}", e)))?;
+
+    // Parse existing config as TOML table
+    let mut existing: toml::Table = existing_content.parse().map_err(|e: toml::de::Error| {
+        Error::Init(format!("failed to parse existing config: {}", e))
+    })?;
+
+    // Parse default config as TOML table
+    let default: toml::Table = TEMPLATE_CONFIG_TOML.parse().map_err(|e: toml::de::Error| {
+        Error::Init(format!("failed to parse default config: {}", e))
+    })?;
+
+    // Merge missing top-level sections from default into existing
+    for (key, value) in default {
+        if !existing.contains_key(&key) {
+            existing.insert(key, value);
+        }
+    }
+
+    // Serialize merged config back to TOML
+    let merged_content = toml::to_string_pretty(&existing)
+        .map_err(|e| Error::Init(format!("failed to serialize merged config: {}", e)))?;
+
+    // Write merged config back to file
+    write_file(config_path, &merged_content)
 }
 
 /// Write CLAUDE.md, handling three cases:
@@ -1301,6 +1456,135 @@ mod tests {
         assert!(!config.rules.system.is_empty());
     }
 
+    #[test]
+    fn test_load_or_migrate_config_adds_missing_rules_section() {
+        let temp = TempDir::new().unwrap();
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // Config with paths only (missing [rules] section)
+        let old_config = r#"
+[paths]
+spec_folder = "custom/specs/"
+changes_folder = "custom/_changes"
+archive_folder = "custom/_archive"
+"#;
+        fs::write(spox_dir.join("config.toml"), old_config).unwrap();
+
+        let config = load_or_migrate_config(temp.path()).unwrap();
+
+        // Should have default rules
+        assert!(!config.rules.system.is_empty());
+        // Should preserve custom paths
+        assert_eq!(config.paths.spec_folder, "custom/specs/");
+        assert_eq!(config.paths.changes_folder, "custom/_changes");
+        assert_eq!(config.paths.archive_folder, "custom/_archive");
+    }
+
+    #[test]
+    fn test_load_or_migrate_config_adds_missing_paths_section() {
+        let temp = TempDir::new().unwrap();
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // Config with rules only (missing [paths] section)
+        let old_config = r#"
+[rules]
+system = ["mcp", "global"]
+custom = ["my-rules.md"]
+"#;
+        fs::write(spox_dir.join("config.toml"), old_config).unwrap();
+
+        let config = load_or_migrate_config(temp.path()).unwrap();
+
+        // Should preserve custom rules
+        assert_eq!(config.rules.system, vec!["mcp", "global"]);
+        assert_eq!(config.rules.custom, vec!["my-rules.md"]);
+        // Should have default paths
+        assert_eq!(config.paths.spec_folder, "specs/");
+        assert_eq!(config.paths.changes_folder, "specs/_changes");
+        assert_eq!(config.paths.archive_folder, "specs/_archive");
+    }
+
+    #[test]
+    fn test_load_or_migrate_config_preserves_custom_system_array() {
+        let temp = TempDir::new().unwrap();
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // User customized system array (removed some defaults)
+        let old_config = r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp", "coding"]
+custom = []
+"#;
+        fs::write(spox_dir.join("config.toml"), old_config).unwrap();
+
+        let config = load_or_migrate_config(temp.path()).unwrap();
+
+        // User's customized system array should be preserved
+        assert_eq!(config.rules.system, vec!["mcp", "coding"]);
+    }
+
+    #[test]
+    fn test_load_or_migrate_config_preserves_custom_array() {
+        let temp = TempDir::new().unwrap();
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // User added custom rules
+        let old_config = r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp", "global", "coding", "testing", "backend", "frontend", "vcs"]
+custom = ["my-team-rules.md", "security-policy.md"]
+"#;
+        fs::write(spox_dir.join("config.toml"), old_config).unwrap();
+
+        let config = load_or_migrate_config(temp.path()).unwrap();
+
+        // User's custom array should be preserved
+        assert_eq!(
+            config.rules.custom,
+            vec!["my-team-rules.md", "security-policy.md"]
+        );
+    }
+
+    #[test]
+    fn test_load_or_migrate_config_merged_file_is_valid_toml() {
+        let temp = TempDir::new().unwrap();
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        // Config with paths only (missing [rules] section)
+        let old_config = r#"
+[paths]
+spec_folder = "custom/specs/"
+changes_folder = "custom/_changes"
+archive_folder = "custom/_archive"
+"#;
+        fs::write(spox_dir.join("config.toml"), old_config).unwrap();
+
+        // First migration
+        load_or_migrate_config(temp.path()).unwrap();
+
+        // Reload the file to verify it's valid TOML that can be loaded
+        let config = load_or_migrate_config(temp.path()).unwrap();
+
+        // Should still have preserved paths and added rules
+        assert_eq!(config.paths.spec_folder, "custom/specs/");
+        assert!(!config.rules.system.is_empty());
+    }
+
     // ==================== Tests for append_gitignore_rules ====================
 
     #[test]
@@ -1742,5 +2026,370 @@ unclosed
 "#;
         let result = validate_markdown(content);
         assert!(result.is_err());
+    }
+
+    // ==========================================================================
+    // Integration Tests for Config Preservation (Tasks 3.1-3.5)
+    // ==========================================================================
+
+    #[test]
+    fn test_init_preserves_existing_config_toml_on_reinit() {
+        // Task 3.1: Verify that existing config.toml is not overwritten on re-init
+        let temp = TempDir::new().unwrap();
+
+        // First init creates default config
+        run(temp.path()).unwrap();
+
+        // Modify config.toml with custom content
+        let config_path = temp.path().join(".spox/config.toml");
+        let custom_config = r#"
+[paths]
+spec_folder = "my-specs/"
+changes_folder = "my-specs/_changes"
+archive_folder = "my-specs/_archive"
+
+[rules]
+system = ["mcp"]
+custom = ["team-rules.md"]
+"#;
+        fs::write(&config_path, custom_config).unwrap();
+
+        // Re-run init (should not overwrite config.toml)
+        run(temp.path()).unwrap();
+
+        // Verify custom config is preserved
+        let content = fs::read_to_string(&config_path).unwrap();
+        assert!(
+            content.contains("my-specs/"),
+            "Custom spec_folder should be preserved"
+        );
+        assert!(
+            content.contains("team-rules.md"),
+            "Custom rules should be preserved"
+        );
+    }
+
+    #[test]
+    fn test_init_preserves_custom_system_array_on_reinit() {
+        // Task 3.2: Verify custom `system` array is preserved through full init flow
+        let temp = TempDir::new().unwrap();
+
+        // First init
+        run(temp.path()).unwrap();
+
+        // Modify system array (user removed some defaults)
+        let config_path = temp.path().join(".spox/config.toml");
+        let custom_config = r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp", "testing"]
+custom = []
+"#;
+        fs::write(&config_path, custom_config).unwrap();
+
+        // Re-run init
+        run(temp.path()).unwrap();
+
+        // Load and verify config through the normal flow
+        let config = load_or_migrate_config(temp.path()).unwrap();
+        assert_eq!(
+            config.rules.system,
+            vec!["mcp", "testing"],
+            "Custom system array should be preserved"
+        );
+    }
+
+    #[test]
+    fn test_init_preserves_custom_array_on_reinit() {
+        // Task 3.3: Verify custom `custom` array is preserved through full init flow
+        let temp = TempDir::new().unwrap();
+
+        // First init
+        run(temp.path()).unwrap();
+
+        // Add custom rules
+        let config_path = temp.path().join(".spox/config.toml");
+        let custom_config = r#"
+[paths]
+spec_folder = "specs/"
+changes_folder = "specs/_changes"
+archive_folder = "specs/_archive"
+
+[rules]
+system = ["mcp", "global", "coding", "testing", "backend", "frontend", "vcs"]
+custom = ["company-standards.md", "security-policy.md", "api-guidelines.md"]
+"#;
+        fs::write(&config_path, custom_config).unwrap();
+
+        // Re-run init
+        run(temp.path()).unwrap();
+
+        // Verify custom array is preserved
+        let config = load_or_migrate_config(temp.path()).unwrap();
+        assert_eq!(
+            config.rules.custom,
+            vec![
+                "company-standards.md",
+                "security-policy.md",
+                "api-guidelines.md"
+            ],
+            "Custom rules array should be preserved"
+        );
+    }
+
+    #[test]
+    fn test_init_migration_adds_rules_preserves_paths() {
+        // Task 3.4: Verify migration adds missing [rules] section without overwriting [paths]
+        let temp = TempDir::new().unwrap();
+
+        // Create .spox directory manually with old config format (missing [rules])
+        let spox_dir = temp.path().join(".spox");
+        fs::create_dir_all(&spox_dir).unwrap();
+
+        let old_config = r#"
+[paths]
+spec_folder = "documentation/specs/"
+changes_folder = "documentation/_changes"
+archive_folder = "documentation/_archive"
+"#;
+        fs::write(spox_dir.join("config.toml"), old_config).unwrap();
+
+        // Run init (should trigger migration)
+        run(temp.path()).unwrap();
+
+        // Verify paths are preserved and rules are added
+        let config = load_or_migrate_config(temp.path()).unwrap();
+        assert_eq!(
+            config.paths.spec_folder, "documentation/specs/",
+            "Custom paths should be preserved"
+        );
+        assert_eq!(
+            config.paths.changes_folder, "documentation/_changes",
+            "Custom changes_folder should be preserved"
+        );
+        assert_eq!(
+            config.paths.archive_folder, "documentation/_archive",
+            "Custom archive_folder should be preserved"
+        );
+        assert!(
+            !config.rules.system.is_empty(),
+            "Default rules should be added"
+        );
+    }
+
+    #[test]
+    fn test_init_new_project_gets_full_default_config() {
+        // Task 3.5: Verify new project gets full default config
+        let temp = TempDir::new().unwrap();
+
+        // Run init on fresh directory
+        run(temp.path()).unwrap();
+
+        // Load config and verify it has all expected sections with defaults
+        let config = load_or_migrate_config(temp.path()).unwrap();
+
+        // Verify paths section has defaults
+        assert_eq!(config.paths.spec_folder, "specs/");
+        assert_eq!(config.paths.changes_folder, "specs/_changes");
+        assert_eq!(config.paths.archive_folder, "specs/_archive");
+
+        // Verify rules section has defaults
+        assert!(
+            config.rules.system.contains(&"mcp".to_string()),
+            "Default system should include mcp"
+        );
+        assert!(
+            config.rules.system.contains(&"global".to_string()),
+            "Default system should include global"
+        );
+        assert!(
+            config.rules.system.contains(&"coding".to_string()),
+            "Default system should include coding"
+        );
+        assert!(
+            config.rules.custom.is_empty(),
+            "Default custom should be empty"
+        );
+    }
+
+    // ==================== Tests for Version Lock ====================
+
+    #[test]
+    fn test_init_creates_version_lock_on_fresh_project() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        let lock_path = temp.path().join(".spox/version.lock");
+        assert!(lock_path.exists(), "version.lock should be created");
+
+        let lock = crate::core::version_lock::VersionLock::load(&lock_path).unwrap();
+        assert_eq!(
+            lock.initialized_version,
+            crate::core::version_lock::current_version(),
+            "initialized_version should match current binary version"
+        );
+        assert!(
+            lock.updated_versions.is_empty(),
+            "updated_versions should be empty on fresh init"
+        );
+    }
+
+    #[test]
+    fn test_init_updates_version_lock_on_reinit_with_different_version() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        // Manually modify the version.lock to simulate an older version
+        let lock_path = temp.path().join(".spox/version.lock");
+        let lock = crate::core::version_lock::VersionLock::new("0.1.0");
+        lock.save(&lock_path).unwrap();
+
+        // Re-run init (should add current version to updated_versions)
+        run(temp.path()).unwrap();
+
+        let updated_lock = crate::core::version_lock::VersionLock::load(&lock_path).unwrap();
+        assert_eq!(
+            updated_lock.initialized_version, "0.1.0",
+            "initialized_version should be preserved"
+        );
+        assert!(
+            updated_lock
+                .updated_versions
+                .contains(&crate::core::version_lock::current_version().to_string()),
+            "updated_versions should contain current version"
+        );
+    }
+
+    #[test]
+    fn test_init_preserves_version_lock_on_reinit_with_same_version() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        let lock_path = temp.path().join(".spox/version.lock");
+        let lock_before = crate::core::version_lock::VersionLock::load(&lock_path).unwrap();
+        let content_before = fs::read_to_string(&lock_path).unwrap();
+
+        // Re-run init (should not modify version.lock)
+        run(temp.path()).unwrap();
+
+        let content_after = fs::read_to_string(&lock_path).unwrap();
+        let lock_after = crate::core::version_lock::VersionLock::load(&lock_path).unwrap();
+
+        assert_eq!(
+            content_before, content_after,
+            "version.lock content should be unchanged"
+        );
+        assert_eq!(
+            lock_before.initialized_version, lock_after.initialized_version,
+            "initialized_version should be unchanged"
+        );
+        assert_eq!(
+            lock_before.updated_versions, lock_after.updated_versions,
+            "updated_versions should be unchanged"
+        );
+    }
+
+    #[test]
+    fn test_version_lock_preserves_update_history() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        // Simulate multiple version upgrades
+        let lock_path = temp.path().join(".spox/version.lock");
+        let mut lock = crate::core::version_lock::VersionLock::new("0.1.0");
+        lock.updated_versions = vec!["0.2.0".to_string(), "0.3.0".to_string()];
+        lock.save(&lock_path).unwrap();
+
+        // Re-run init with current version
+        run(temp.path()).unwrap();
+
+        let updated_lock = crate::core::version_lock::VersionLock::load(&lock_path).unwrap();
+        assert_eq!(updated_lock.initialized_version, "0.1.0");
+        // Previous versions should be preserved
+        assert!(updated_lock.updated_versions.contains(&"0.2.0".to_string()));
+        assert!(updated_lock.updated_versions.contains(&"0.3.0".to_string()));
+        // Current version should be appended
+        assert!(updated_lock
+            .updated_versions
+            .contains(&crate::core::version_lock::current_version().to_string()));
+    }
+
+    #[test]
+    fn test_version_lock_not_ignored_by_gitignore() {
+        let temp = TempDir::new().unwrap();
+        run(temp.path()).unwrap();
+
+        let gitignore = temp.path().join(".spox/.gitignore");
+        let content = fs::read_to_string(&gitignore).unwrap();
+
+        // The gitignore should explicitly NOT ignore version.lock
+        assert!(
+            content.contains("!version.lock"),
+            ".gitignore should contain !version.lock to ensure it's committed"
+        );
+    }
+
+    // ==================== Tests for Version Compatibility Check (Task 2.2-2.4) ====================
+
+    #[test]
+    fn test_check_version_compatibility_returns_equal_for_same_version() {
+        use crate::core::version_lock::{compare_versions, current_version, VersionComparison};
+
+        let result = compare_versions(current_version(), current_version());
+        assert!(matches!(result, Ok(VersionComparison::Equal)));
+    }
+
+    #[test]
+    fn test_check_version_compatibility_returns_binary_older_when_outdated() {
+        use crate::core::version_lock::{compare_versions, VersionComparison};
+
+        // Binary 0.3.0, lock 0.4.0 -> BinaryOlder
+        let result = compare_versions("0.3.0", "0.4.0");
+        assert!(matches!(result, Ok(VersionComparison::BinaryOlder)));
+    }
+
+    #[test]
+    fn test_check_version_compatibility_returns_binary_newer_for_upgrade() {
+        use crate::core::version_lock::{compare_versions, UpgradeType, VersionComparison};
+
+        // Binary 0.5.0, lock 0.4.0 -> BinaryNewer (minor upgrade)
+        let result = compare_versions("0.5.0", "0.4.0");
+        assert!(matches!(
+            result,
+            Ok(VersionComparison::BinaryNewer {
+                upgrade_type: UpgradeType::Minor
+            })
+        ));
+    }
+
+    #[test]
+    fn test_format_version_warning_produces_output() {
+        let warning = format_version_warning("0.3.0", "0.4.0");
+        assert!(warning.contains("0.3.0"));
+        assert!(warning.contains("0.4.0"));
+        assert!(warning.contains("older") || warning.contains("outdated"));
+    }
+
+    #[test]
+    fn test_format_upgrade_message_includes_version() {
+        use crate::core::version_lock::UpgradeType;
+
+        let message = format_upgrade_message("0.3.0", "0.4.0", UpgradeType::Minor);
+        assert!(message.contains("0.4.0"));
+    }
+
+    #[test]
+    fn test_format_upgrade_message_includes_migration_hint_when_available() {
+        use crate::core::version_lock::{get_migration_hints, UpgradeType};
+
+        // When there's a migration hint for 0.3 -> 0.4
+        if get_migration_hints("0.3.0", "0.4.0").is_some() {
+            let message = format_upgrade_message("0.3.0", "0.4.0", UpgradeType::Minor);
+            assert!(message.contains("version lock") || message.contains("Migration"));
+        }
     }
 }

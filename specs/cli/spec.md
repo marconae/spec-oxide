@@ -322,3 +322,35 @@ The CLI SHALL provide `spox change show <id>` to display a change proposal.
 - **WHEN** `spox change show <id>` is executed with an invalid change ID
 - **THEN** print an error message indicating change not found
 - **AND** exit with code 1
+
+### Requirement: Project Show Command
+
+The CLI SHALL display project information including version tracking when `spox show` is executed without arguments.
+
+#### Scenario: Show project info
+
+- **WHEN** user runs `spox show` in a spox project
+- **THEN** the command displays project root path
+- **AND** displays initialized spox version from `.spox/version.lock`
+- **AND** displays current binary version
+- **AND** displays version compatibility status
+- **AND** exits with code 0
+
+#### Scenario: Show project info with version warning
+
+- **WHEN** user runs `spox show` in a spox project
+- **AND** the current binary version is lower than the project's recorded version
+- **THEN** the compatibility status indicates a warning
+- **AND** suggests upgrading spox
+
+#### Scenario: Show fails outside project
+
+- **WHEN** user runs `spox show` outside a spox project
+- **THEN** the command displays an error indicating no spox project found
+- **AND** exits with non-zero code
+
+#### Scenario: Show handles missing lock file
+
+- **WHEN** user runs `spox show` in a spox project without `.spox/version.lock`
+- **THEN** the command displays "unknown" for initialized version
+- **AND** suggests running `spox init` to create version tracking

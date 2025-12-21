@@ -3,13 +3,17 @@
 //! Provides `run_dashboard`, `run_spec_show`, and `run_change_show` functions
 //! that display formatted spec and change information.
 
+use std::env;
 use std::path::Path;
 
 use crate::config::Config;
 use crate::error::{Error, Result};
-use crate::show::{change, dashboard, spec};
+use crate::show::{change, dashboard, project, spec};
 
 /// Run the top-level `show` command to display the project dashboard.
+///
+/// Displays project info (root, versions, status) followed by the
+/// specs and changes dashboard.
 ///
 /// # Returns
 /// Returns `Ok(())` on success, or an error if config cannot be loaded
@@ -18,8 +22,19 @@ pub fn run_dashboard() -> Result<()> {
     let config_path = Path::new(".spox/config.toml");
     let config = Config::load(config_path)?;
 
-    let output = dashboard::show_dashboard(&config).map_err(Error::Other)?;
-    println!("{}", output);
+    // Get absolute project root path
+    let project_root = env::current_dir()
+        .map_err(|e| Error::Other(format!("Failed to get current directory: {}", e)))?;
+
+    // Gather and display project info
+    let project_info = project::gather_project_info(&project_root, &config);
+    let project_output = project::format_project_info(&project_info);
+
+    // Get dashboard output
+    let dashboard_output = dashboard::show_dashboard(&config).map_err(Error::Other)?;
+
+    println!("{}", project_output);
+    println!("{}", dashboard_output);
     Ok(())
 }
 
