@@ -34,8 +34,8 @@ Spec Oxide maintains an up-to-date `CLAUDE.md` file that includes:
 * Proven coding standards for backend, frontend, testing and verification
 * Enforcement of test-driven development and clean code practices
 * Instructions on how to use the built-in MCP server
-* Pre-configured flows for [Serena](https://github.com/oraios/seren) MCP
-  and [Context7](https://github.com/context7/context7)
+* Pre-configured flows for [Serena](https://github.com/oraios/serena) MCP
+  and [Context7](https://github.com/upstash/context7)
 
 ### 📺 Track Specifications and Changes with a simple CLI
 
